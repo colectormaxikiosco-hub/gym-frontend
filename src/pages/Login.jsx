@@ -147,11 +147,15 @@ const Login = () => {
                   required
                   autoComplete="username"
                   disabled={loading}
+                  inputProps={{
+                    style: { fontSize: 16 },
+                    enterKeyHint: "next",
+                  }}
                   sx={{
                     "& .MuiOutlinedInput-root": {
                       borderRadius: "14px",
                       backgroundColor: "#f9fafb",
-                      fontSize: "15px",
+                      fontSize: "16px",
                       fontFamily: "'Inter', sans-serif",
                       transition: "all 0.2s ease",
                       "& fieldset": {
@@ -174,7 +178,7 @@ const Login = () => {
                     },
                     "& .MuiInputLabel-root": {
                       fontFamily: "'Inter', sans-serif",
-                      fontSize: "15px",
+                      fontSize: "16px",
                       color: "#6b7280",
                       "&.Mui-focused": {
                         color: "#f59e0b",
@@ -182,6 +186,7 @@ const Login = () => {
                     },
                     "& input": {
                       padding: "14px 16px",
+                      fontSize: "16px",
                     },
                   }}
                 />
@@ -198,6 +203,9 @@ const Login = () => {
                   required
                   autoComplete="current-password"
                   disabled={loading}
+                  inputProps={{
+                    style: { fontSize: 16 },
+                  }}
                   InputProps={{
                     endAdornment: (
                       <InputAdornment position="end">
@@ -223,7 +231,7 @@ const Login = () => {
                     "& .MuiOutlinedInput-root": {
                       borderRadius: "14px",
                       backgroundColor: "#f9fafb",
-                      fontSize: "15px",
+                      fontSize: "16px",
                       fontFamily: "'Inter', sans-serif",
                       transition: "all 0.2s ease",
                       "& fieldset": {
@@ -246,7 +254,7 @@ const Login = () => {
                     },
                     "& .MuiInputLabel-root": {
                       fontFamily: "'Inter', sans-serif",
-                      fontSize: "15px",
+                      fontSize: "16px",
                       color: "#6b7280",
                       "&.Mui-focused": {
                         color: "#f59e0b",
@@ -254,6 +262,7 @@ const Login = () => {
                     },
                     "& input": {
                       padding: "14px 16px",
+                      fontSize: "16px",
                     },
                   }}
                 />

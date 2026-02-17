@@ -79,6 +79,7 @@ const Clients = () => {
   const [whatsAppConfirmData, setWhatsAppConfirmData] = useState(null)
   const [openMembershipReminderDialog, setOpenMembershipReminderDialog] = useState(false)
   const [membershipReminderData, setMembershipReminderData] = useState(null)
+  const [dialogError, setDialogError] = useState("")
 
   const debouncedSearchTerm = useDebounce(searchTerm, 500)
   const pagination = usePagination({ limit: 10, rowsPerPageOptions: [5, 10, 25, 50] })
@@ -126,6 +127,7 @@ const Clients = () => {
   }, [loadClients])
 
   const handleOpenDialog = (client = null) => {
+    setDialogError("")
     if (client) {
       setEditMode(true)
       setCurrentClient({
@@ -209,6 +211,7 @@ const Clients = () => {
 
   const handleCloseDialog = () => {
     setOpenDialog(false)
+    setDialogError("")
     setCurrentClient({
       id: null,
       username: "",
@@ -261,7 +264,9 @@ const Clients = () => {
       handleCloseDialog()
       loadClients()
     } catch (error) {
-      setMessage({ type: "error", text: error.response?.data?.message || "Error al guardar cliente" })
+      const errorText = error.response?.data?.message || "Error al guardar cliente"
+      setDialogError(errorText)
+      setMessage({ type: "error", text: errorText })
     }
   }
 
@@ -869,6 +874,19 @@ const Clients = () => {
 
         {/* Content */}
         <DialogContent sx={{ px: { xs: 2.5, sm: 3 }, py: 3 }}>
+          {dialogError && (
+            <Alert
+              severity="error"
+              onClose={() => setDialogError("")}
+              sx={{
+                mb: 2,
+                borderRadius: "10px",
+                "& .MuiAlert-message": { width: "100%" },
+              }}
+            >
+              {dialogError}
+            </Alert>
+          )}
           <Box
             sx={{
               display: "grid",

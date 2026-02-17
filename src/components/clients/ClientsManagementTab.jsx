@@ -64,6 +64,7 @@ const ClientsManagementTab = () => {
   const [openMembershipReminderDialog, setOpenMembershipReminderDialog] = useState(false)
   const [membershipReminderData, setMembershipReminderData] = useState(null)
   const [daysRemainingFilter, setDaysRemainingFilter] = useState(null) // null | 0 | 1 | 2 | 3 | 4 | 5 | 'expired'
+  const [dialogError, setDialogError] = useState("")
 
   useEffect(() => {
     loadClients()
@@ -91,6 +92,7 @@ const ClientsManagementTab = () => {
   }
 
   const handleOpenDialog = (client = null) => {
+    setDialogError("")
     if (client) {
       setEditMode(true)
       setCurrentClient({
@@ -121,6 +123,7 @@ const ClientsManagementTab = () => {
 
   const handleCloseDialog = () => {
     setOpenDialog(false)
+    setDialogError("")
     setCurrentClient({
       id: null,
       username: "",
@@ -226,7 +229,9 @@ const ClientsManagementTab = () => {
       handleCloseDialog()
       loadClients()
     } catch (error) {
-      setMessage({ type: "error", text: error.response?.data?.message || "Error al guardar cliente" })
+      const errorText = error.response?.data?.message || "Error al guardar cliente"
+      setDialogError(errorText)
+      setMessage({ type: "error", text: errorText })
     }
   }
 
@@ -464,6 +469,15 @@ const ClientsManagementTab = () => {
       <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
         <DialogTitle className="font-bold">{editMode ? "Editar Cliente" : "Nuevo Cliente"}</DialogTitle>
         <DialogContent>
+          {dialogError && (
+            <Alert
+              severity="error"
+              onClose={() => setDialogError("")}
+              sx={{ mb: 2, borderRadius: "10px" }}
+            >
+              {dialogError}
+            </Alert>
+          )}
           <Box className="space-y-4 mt-2">
             {/* DNI primero: al escribir se rellena la contraseña por defecto (documento) */}
             <TextField
