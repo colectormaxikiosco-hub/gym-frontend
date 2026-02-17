@@ -69,9 +69,12 @@ api.interceptors.response.use(
     }
 
     if (error.response?.status === 401) {
-      localStorage.removeItem("gymToken")
-      localStorage.removeItem("gymUser")
-      window.location.href = "/login"
+      const isLoginRequest = error.config?.url?.includes("auth/login")
+      if (!isLoginRequest) {
+        localStorage.removeItem("gymToken")
+        localStorage.removeItem("gymUser")
+        window.location.href = "/login"
+      }
     }
 
     if (error.response?.status === 429) {

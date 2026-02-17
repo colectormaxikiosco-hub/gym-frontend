@@ -4,14 +4,27 @@ import { useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { useAuth } from "../context/AuthContext"
 import toast, { Toaster } from "react-hot-toast"
-import { Box, TextField, Button, Typography, CircularProgress, IconButton, InputAdornment } from "@mui/material"
-import { FitnessCenter, Visibility, VisibilityOff } from "@mui/icons-material"
+import {
+  Box,
+  TextField,
+  Button,
+  Typography,
+  CircularProgress,
+  IconButton,
+  InputAdornment,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+} from "@mui/material"
+import { FitnessCenter, Visibility, VisibilityOff, ErrorOutline } from "@mui/icons-material"
 
 const Login = () => {
   const [username, setUsername] = useState("")
   const [password, setPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [errorDialog, setErrorDialog] = useState({ open: false, message: "" })
   const navigate = useNavigate()
   const { login } = useAuth()
 
@@ -73,22 +86,14 @@ const Login = () => {
       }, 1500)
     } catch (err) {
       setLoading(false)
-
-      const errorMessage = err.message || "Credenciales incorrectas. Verifica tus datos."
-
-      toast.error(errorMessage, {
-        duration: 4000,
-        position: "top-center",
-        style: {
-          background: "#dc2626",
-          color: "#fff",
-          fontWeight: "600",
-          padding: "16px 24px",
-          borderRadius: "12px",
-          fontSize: "15px",
-        },
-      })
+      const errorMessage = err.message || "Credenciales incorrectas. Verificá usuario y contraseña."
+      setErrorDialog({ open: true, message: errorMessage })
     }
+  }
+
+  const handleCloseErrorDialog = () => {
+    setErrorDialog({ open: false, message: "" })
+    setPassword("")
   }
 
   return (
@@ -320,6 +325,57 @@ const Login = () => {
           </Typography>
         </Box>
       </Box>
+
+      {/* Diálogo de error: credenciales inválidas u otro error */}
+      <Dialog
+        open={errorDialog.open}
+        onClose={handleCloseErrorDialog}
+        PaperProps={{
+          sx: {
+            borderRadius: "16px",
+            maxWidth: 380,
+            width: "100%",
+            mx: 2,
+          },
+        }}
+      >
+        <DialogTitle
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            gap: 1.5,
+            fontWeight: 600,
+            color: "#b91c1c",
+            pt: 2.5,
+            pb: 0,
+          }}
+        >
+          <ErrorOutline sx={{ fontSize: 28 }} />
+          Error al iniciar sesión
+        </DialogTitle>
+        <DialogContent sx={{ pt: 1.5, pb: 0 }}>
+          <Typography sx={{ color: "#374151", fontSize: "15px", lineHeight: 1.5 }}>
+            {errorDialog.message}
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, py: 2.5, pt: 2 }}>
+          <Button
+            onClick={handleCloseErrorDialog}
+            variant="contained"
+            fullWidth
+            sx={{
+              borderRadius: "10px",
+              textTransform: "none",
+              fontWeight: 600,
+              py: 1.25,
+              backgroundColor: "#dc2626",
+              "&:hover": { backgroundColor: "#b91c1c" },
+            }}
+          >
+            Aceptar
+          </Button>
+        </DialogActions>
+      </Dialog>
     </div>
   )
 }
