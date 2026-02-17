@@ -29,6 +29,8 @@ export function normalizePhoneForWhatsApp(input) {
   return null
 }
 
+const WELCOME_SITE_URL = "www.lifefitnesstrancas.com"
+
 /**
  * Arma el mensaje de bienvenida con credenciales para enviar por WhatsApp.
  */
@@ -40,7 +42,9 @@ export function getWelcomeMessageWhatsApp(username, password) {
     `Usuario: ${username}`,
     `Contraseña: ${password}`,
     "",
-    "Ingresá a lifefitness.com para ver tu estado de membresía, avisos y más.",
+    `Ingresá a ${WELCOME_SITE_URL} para ver tu estado de membresía, avisos y más.`,
+    "",
+    "Podés cambiar tu contraseña en la sección Perfil una vez que ingreses.",
     "",
     "— Life Fitness",
   ].join("\n")

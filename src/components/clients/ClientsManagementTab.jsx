@@ -201,9 +201,10 @@ const ClientsManagementTab = () => {
         })
         setMessage({ type: "success", text: "Cliente actualizado correctamente" })
       } else {
+        const passwordToUse = (currentClient.password && currentClient.password.trim()) || (currentClient.dni && currentClient.dni.trim()) || ""
         await clientService.createClient({
           username: currentClient.username,
-          password: currentClient.password,
+          password: passwordToUse,
           name: currentClient.name,
           phone: currentClient.phone,
           dni: currentClient.dni,
@@ -216,7 +217,7 @@ const ClientsManagementTab = () => {
           setWhatsAppConfirmData({
             phone,
             username: currentClient.username,
-            password: currentClient.password,
+            password: passwordToUse,
           })
           setOpenWhatsAppConfirmDialog(true)
         }
@@ -464,11 +465,19 @@ const ClientsManagementTab = () => {
         <DialogTitle className="font-bold">{editMode ? "Editar Cliente" : "Nuevo Cliente"}</DialogTitle>
         <DialogContent>
           <Box className="space-y-4 mt-2">
+            {/* DNI primero: al escribir se rellena la contraseña por defecto (documento) */}
             <TextField
               fullWidth
-              label="Nombre de usuario"
-              value={currentClient.username}
-              onChange={(e) => setCurrentClient({ ...currentClient, username: e.target.value })}
+              label="DNI"
+              value={currentClient.dni}
+              onChange={(e) => {
+                const v = e.target.value
+                setCurrentClient((prev) => ({
+                  ...prev,
+                  dni: v,
+                  ...(!editMode && { password: v }),
+                }))
+              }}
               required
               sx={{
                 "& .MuiOutlinedInput-root": {
@@ -486,7 +495,7 @@ const ClientsManagementTab = () => {
                 value={currentClient.password}
                 onChange={(e) => setCurrentClient({ ...currentClient, password: e.target.value })}
                 required
-                helperText="Mínimo 6 caracteres"
+                helperText="Por defecto es el DNI. Podés cambiarla."
                 sx={{
                   "& .MuiOutlinedInput-root": {
                     "&.Mui-focused fieldset": { borderColor: "#f59e0b" },
@@ -498,9 +507,9 @@ const ClientsManagementTab = () => {
 
             <TextField
               fullWidth
-              label="Nombre completo"
-              value={currentClient.name}
-              onChange={(e) => setCurrentClient({ ...currentClient, name: e.target.value })}
+              label="Nombre de usuario"
+              value={currentClient.username}
+              onChange={(e) => setCurrentClient({ ...currentClient, username: e.target.value })}
               required
               sx={{
                 "& .MuiOutlinedInput-root": {
@@ -512,9 +521,9 @@ const ClientsManagementTab = () => {
 
             <TextField
               fullWidth
-              label="DNI"
-              value={currentClient.dni}
-              onChange={(e) => setCurrentClient({ ...currentClient, dni: e.target.value })}
+              label="Nombre completo"
+              value={currentClient.name}
+              onChange={(e) => setCurrentClient({ ...currentClient, name: e.target.value })}
               required
               sx={{
                 "& .MuiOutlinedInput-root": {

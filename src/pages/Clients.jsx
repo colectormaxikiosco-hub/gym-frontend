@@ -236,9 +236,10 @@ const Clients = () => {
         })
         setMessage({ type: "success", text: "Cliente actualizado correctamente" })
       } else {
+        const passwordToUse = currentClient.password?.trim() || currentClient.dni?.trim() || ""
         await clientService.createClient({
           username: currentClient.username,
-          password: currentClient.password,
+          password: passwordToUse,
           name: currentClient.name,
           phone: currentClient.phone,
           dni: currentClient.dni,
@@ -251,7 +252,7 @@ const Clients = () => {
           setWhatsAppConfirmData({
             phone,
             username: currentClient.username,
-            password: currentClient.password,
+            password: passwordToUse,
           })
           setOpenWhatsAppConfirmDialog(true)
         }
@@ -875,18 +876,25 @@ const Clients = () => {
               gap: { xs: 2, sm: 2.5 },
             }}
           >
-            {/* Nombre de usuario */}
+            {/* DNI primero: al escribir se rellena la contraseña por defecto (documento) */}
             <TextField
               fullWidth
-              label="Nombre de usuario"
-              value={currentClient.username}
-              onChange={(e) => setCurrentClient({ ...currentClient, username: e.target.value })}
+              label="DNI"
+              value={currentClient.dni}
+              onChange={(e) => {
+                const v = e.target.value
+                setCurrentClient((prev) => ({
+                  ...prev,
+                  dni: v,
+                  ...(!editMode && { password: v }),
+                }))
+              }}
               required
               size="small"
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
-                    <Person sx={{ color: "#9ca3af", fontSize: 20 }} />
+                    <Badge sx={{ color: "#9ca3af", fontSize: 20 }} />
                   </InputAdornment>
                 ),
               }}
@@ -901,7 +909,7 @@ const Clients = () => {
               }}
             />
 
-            {/* Contraseña - solo en modo crear */}
+            {/* Contraseña - solo en modo crear; por defecto = DNI, se rellena al escribir DNI */}
             {!editMode && (
               <TextField
                 fullWidth
@@ -911,6 +919,7 @@ const Clients = () => {
                 onChange={(e) => setCurrentClient({ ...currentClient, password: e.target.value })}
                 required
                 size="small"
+                helperText="Por defecto es el DNI. Podés cambiarla."
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">
@@ -967,18 +976,18 @@ const Clients = () => {
               </FormControl>
             )}
 
-            {/* Nombre completo */}
+            {/* Nombre de usuario */}
             <TextField
               fullWidth
-              label="Nombre completo"
-              value={currentClient.name}
-              onChange={(e) => setCurrentClient({ ...currentClient, name: e.target.value })}
+              label="Nombre de usuario"
+              value={currentClient.username}
+              onChange={(e) => setCurrentClient({ ...currentClient, username: e.target.value })}
               required
               size="small"
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
-                    <DriveFileRenameOutline sx={{ color: "#9ca3af", fontSize: 20 }} />
+                    <Person sx={{ color: "#9ca3af", fontSize: 20 }} />
                   </InputAdornment>
                 ),
               }}
@@ -993,18 +1002,18 @@ const Clients = () => {
               }}
             />
 
-            {/* DNI */}
+            {/* Nombre completo */}
             <TextField
               fullWidth
-              label="DNI"
-              value={currentClient.dni}
-              onChange={(e) => setCurrentClient({ ...currentClient, dni: e.target.value })}
+              label="Nombre completo"
+              value={currentClient.name}
+              onChange={(e) => setCurrentClient({ ...currentClient, name: e.target.value })}
               required
               size="small"
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
-                    <Badge sx={{ color: "#9ca3af", fontSize: 20 }} />
+                    <DriveFileRenameOutline sx={{ color: "#9ca3af", fontSize: 20 }} />
                   </InputAdornment>
                 ),
               }}
