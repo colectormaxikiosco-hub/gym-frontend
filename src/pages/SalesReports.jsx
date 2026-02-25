@@ -75,7 +75,7 @@ function getDatePresetRange(preset) {
   }
 }
 
-const PAYMENT_LABELS = { cash: "Efectivo", transfer: "Transferencia", credit_card: "Tarjeta" }
+const PAYMENT_LABELS = { cash: "Efectivo", transfer: "Transferencia", credit_card: "Tarjeta", current_account: "Cuenta corriente", combined: "Combinado" }
 
 function SummaryCard({ title, value, icon: Icon, color, bg, isCurrency }) {
   const display = isCurrency ? formatCurrency(value) : formatNumber(value)

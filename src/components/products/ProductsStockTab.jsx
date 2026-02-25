@@ -116,10 +116,10 @@ const ProductsStockTab = () => {
   }
 
   const handleDelete = async (id) => {
-    if (!window.confirm("¿Estás seguro de desactivar este producto?")) return
+    if (!window.confirm("¿Estás seguro de que deseas eliminar este producto? Se borrará de la base de datos y no podrás recuperarlo.")) return
     try {
       await productService.delete(id)
-      setMessage({ type: "success", text: "Producto desactivado" })
+      setMessage({ type: "success", text: "Producto eliminado correctamente" })
       loadProducts()
     } catch (error) {
       setMessage({ type: "error", text: error.response?.data?.message || "Error al eliminar" })

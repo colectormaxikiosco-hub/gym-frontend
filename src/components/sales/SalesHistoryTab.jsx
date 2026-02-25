@@ -38,6 +38,7 @@ const paymentLabels = {
   transfer: "Transferencia",
   credit_card: "Tarjeta",
   current_account: "Cuenta corriente",
+  combined: "Combinado",
 }
 
 const SalesHistoryTab = () => {
@@ -194,6 +195,7 @@ const SalesHistoryTab = () => {
             <MenuItem value="transfer">Transferencia</MenuItem>
             <MenuItem value="credit_card">Tarjeta</MenuItem>
             <MenuItem value="current_account">Cuenta corriente</MenuItem>
+            <MenuItem value="combined">Combinado</MenuItem>
           </Select>
         </FormControl>
         <FormControl size="small" sx={{ minWidth: 140, ...inputStyles }}>

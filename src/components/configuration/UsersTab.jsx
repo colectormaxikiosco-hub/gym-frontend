@@ -541,6 +541,7 @@ const UsersTab = () => {
               value={currentUser.email}
               onChange={(e) => setCurrentUser({ ...currentUser, email: e.target.value })}
               size="small"
+              placeholder="Opcional"
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">

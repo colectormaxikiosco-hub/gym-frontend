@@ -44,6 +44,8 @@ import {
   WarningAmber,
   Person,
   Assessment,
+  Payment,
+  Delete,
 } from "@mui/icons-material"
 import { useNavigate, useLocation } from "react-router-dom"
 import { format } from "date-fns"
@@ -67,6 +69,8 @@ const Memberships = () => {
   const [dialogStep, setDialogStep] = useState(1)
   const [pendingMembership, setPendingMembership] = useState(null)
   const [paymentMethod, setPaymentMethod] = useState("cash")
+  const [paymentMode, setPaymentMode] = useState("single")
+  const [combinedPayments, setCombinedPayments] = useState([{ id: 1, payment_method: "cash", amount: "" }])
   const [paymentLoading, setPaymentLoading] = useState(false)
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
@@ -163,6 +167,8 @@ const Memberships = () => {
     setDialogStep(1)
     setPendingMembership(null)
     setPaymentMethod("cash")
+    setPaymentMode("single")
+    setCombinedPayments([{ id: 1, payment_method: "cash", amount: "" }])
     setOpenDialog(true)
     setError("")
     navigate(location.pathname, { replace: true, state: {} })
@@ -179,6 +185,8 @@ const Memberships = () => {
     setDialogStep(1)
     setPendingMembership(null)
     setPaymentMethod("cash")
+    setPaymentMode("single")
+    setCombinedPayments([{ id: 1, payment_method: "cash", amount: "" }])
     setOpenDialog(true)
     setError("")
   }
@@ -189,6 +197,8 @@ const Memberships = () => {
     setDialogStep(1)
     setPendingMembership(null)
     setPaymentMethod("cash")
+    setPaymentMode("single")
+    setCombinedPayments([{ id: 1, payment_method: "cash", amount: "" }])
     setFormData({
       client_id: "",
       plan_id: "",
@@ -211,6 +221,9 @@ const Memberships = () => {
       return
     }
     setPendingMembership({ ...formData })
+    setPaymentMode("single")
+    setPaymentMethod("cash")
+    setCombinedPayments([{ id: 1, payment_method: "cash", amount: "" }])
     setDialogStep(2)
   }
 
@@ -221,12 +234,21 @@ const Memberships = () => {
 
   const handleConfirmPayment = async () => {
     if (!pendingMembership) return
+    if (paymentMode === "combined" && !combinedOk) {
+      setError("Los pagos deben sumar exactamente el precio del plan.")
+      return
+    }
     try {
       setPaymentLoading(true)
       setError("")
-      const dataToSend = {
-        ...pendingMembership,
-        payment_method: paymentMethod,
+      const dataToSend = { ...pendingMembership }
+      if (paymentMode === "single") {
+        dataToSend.payment_method = paymentMethod
+      } else {
+        dataToSend.payments = combinedPayments.map((p) => ({
+          payment_method: p.payment_method,
+          amount: Number(p.amount),
+        }))
       }
       await membershipService.create(dataToSend)
       setSuccess("Membresía creada y pago registrado correctamente")
@@ -473,6 +495,9 @@ const Memberships = () => {
 
   const selectedPlan = plans.find((p) => p.id === formData.plan_id)
   const planForPayment = plans.find((p) => p.id === pendingMembership?.plan_id)
+  const planPrice = planForPayment ? Number(planForPayment.price) : 0
+  const combinedSum = combinedPayments.reduce((s, p) => s + (Number(p.amount) || 0), 0)
+  const combinedOk = Math.abs(combinedSum - planPrice) < 0.01 && combinedPayments.every((p) => (Number(p.amount) || 0) > 0)
 
   return (
     <Box className="min-h-screen bg-gradient-to-br from-gray-50 via-amber-50/20 to-gray-50">
@@ -1256,107 +1281,170 @@ const Memberships = () => {
 
                   {/* Método de pago */}
                   <Box>
-                    <Typography
-                      variant="body2"
-                      sx={{ fontWeight: 500, color: "#374151", mb: 1.5 }}
-                    >
+                    <Typography variant="body2" sx={{ fontWeight: 500, color: "#374151", mb: 1.5 }}>
                       Método de pago *
                     </Typography>
-                    <Box
-                      sx={{
-                        display: "grid",
-                        gridTemplateColumns: "1fr 1fr",
-                        gap: 1.5,
-                      }}
-                    >
-                      {[
-                        {
-                          id: "cash",
-                          label: "Efectivo",
-                          sub: "En caja",
-                          icon: AttachMoney,
-                          color: "#16a34a",
-                        },
-                        {
-                          id: "transfer",
-                          label: "Transferencia",
-                          sub: "Bancaria",
-                          icon: AccountBalance,
-                          color: "#2563eb",
-                        },
-                        {
-                          id: "credit_card",
-                          label: "Tarjeta",
-                          sub: "Crédito/Débito",
-                          icon: CreditCard,
-                          color: "#7c3aed",
-                        },
-                        {
-                          id: "current_account",
-                          label: "Cuenta Corriente",
-                          sub: "A crédito",
-                          icon: AccountBalanceWallet,
-                          color: "#ea580c",
-                        },
-                      ].map((item) => {
-                        const selected = paymentMethod === item.id
-                        const Icon = item.icon
-                        return (
-                          <Box
-                            key={item.id}
-                            onClick={() => setPaymentMethod(item.id)}
-                            sx={{
-                              p: 2,
-                              borderRadius: "10px",
-                              border: "2px solid",
-                              borderColor: selected ? item.color : "#e5e7eb",
-                              backgroundColor: selected ? `${item.color}08` : "#fff",
-                              cursor: "pointer",
-                              transition: "all 0.2s",
-                              display: "flex",
-                              alignItems: "center",
-                              gap: 1.5,
-                              "&:hover": {
-                                borderColor: selected ? item.color : "#d1d5db",
-                              },
-                            }}
-                          >
+                    <Box sx={{ display: "flex", gap: 1, mb: 1.5 }}>
+                      <Button
+                        size="small"
+                        variant={paymentMode === "single" ? "contained" : "outlined"}
+                        onClick={() => setPaymentMode("single")}
+                        sx={{
+                          flex: 1,
+                          textTransform: "none",
+                          borderRadius: "10px",
+                          ...(paymentMode === "single" && { backgroundColor: "#d97706", "&:hover": { backgroundColor: "#b45309" } }),
+                        }}
+                      >
+                        Un solo método
+                      </Button>
+                      <Button
+                        size="small"
+                        variant={paymentMode === "combined" ? "contained" : "outlined"}
+                        startIcon={<Payment />}
+                        onClick={() => setPaymentMode("combined")}
+                        sx={{
+                          flex: 1,
+                          textTransform: "none",
+                          borderRadius: "10px",
+                          ...(paymentMode === "combined" && { backgroundColor: "#d97706", "&:hover": { backgroundColor: "#b45309" } }),
+                        }}
+                      >
+                        Combinado
+                      </Button>
+                    </Box>
+                    {paymentMode === "single" ? (
+                      <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 1.5 }}>
+                        {[
+                          { id: "cash", label: "Efectivo", sub: "En caja", icon: AttachMoney, color: "#16a34a" },
+                          { id: "transfer", label: "Transferencia", sub: "Bancaria", icon: AccountBalance, color: "#2563eb" },
+                          { id: "credit_card", label: "Tarjeta", sub: "Crédito/Débito", icon: CreditCard, color: "#7c3aed" },
+                          { id: "current_account", label: "Cuenta Corriente", sub: "A crédito", icon: AccountBalanceWallet, color: "#ea580c" },
+                        ].map((item) => {
+                          const selected = paymentMethod === item.id
+                          const Icon = item.icon
+                          return (
                             <Box
+                              key={item.id}
+                              onClick={() => setPaymentMethod(item.id)}
                               sx={{
-                                width: 36,
-                                height: 36,
+                                p: 2,
                                 borderRadius: "10px",
-                                backgroundColor: selected ? item.color : "#f3f4f6",
+                                border: "2px solid",
+                                borderColor: selected ? item.color : "#e5e7eb",
+                                backgroundColor: selected ? `${item.color}08` : "#fff",
+                                cursor: "pointer",
+                                transition: "all 0.2s",
                                 display: "flex",
                                 alignItems: "center",
-                                justifyContent: "center",
+                                gap: 1.5,
+                                "&:hover": { borderColor: selected ? item.color : "#d1d5db" },
                               }}
                             >
-                              <Icon
-                                sx={{ fontSize: 20, color: selected ? "#fff" : "#9ca3af" }}
-                              />
+                              <Box sx={{ width: 36, height: 36, borderRadius: "10px", backgroundColor: selected ? item.color : "#f3f4f6", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                                <Icon sx={{ fontSize: 20, color: selected ? "#fff" : "#9ca3af" }} />
+                              </Box>
+                              <Box>
+                                <Typography variant="body2" sx={{ fontWeight: 600, color: selected ? item.color : "#374151" }}>{item.label}</Typography>
+                                <Typography variant="caption" color="text.secondary">{item.sub}</Typography>
+                              </Box>
                             </Box>
-                            <Box>
-                              <Typography
-                                variant="body2"
-                                sx={{
-                                  fontWeight: 600,
-                                  color: selected ? item.color : "#374151",
-                                }}
-                              >
-                                {item.label}
-                              </Typography>
-                              <Typography variant="caption" color="text.secondary">
-                                {item.sub}
-                              </Typography>
-                            </Box>
+                          )
+                        })}
+                      </Box>
+                    ) : (
+                      <Box>
+                        <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 1 }}>
+                          Total a cubrir: {formatPrice(planPrice)}
+                        </Typography>
+                        {combinedPayments.map((row) => (
+                          <Box key={row.id} sx={{ display: "flex", gap: 1, alignItems: "center", mb: 1 }}>
+                            <Select
+                              size="small"
+                              value={row.payment_method}
+                              onChange={(e) =>
+                                setCombinedPayments((prev) =>
+                                  prev.map((p) => (p.id === row.id ? { ...p, payment_method: e.target.value } : p))
+                                )
+                              }
+                              sx={{ minWidth: 140, borderRadius: "10px" }}
+                            >
+                              <MenuItem value="cash">Efectivo</MenuItem>
+                              <MenuItem value="transfer">Transferencia</MenuItem>
+                              <MenuItem value="credit_card">Tarjeta</MenuItem>
+                              <MenuItem value="current_account">Cuenta corriente</MenuItem>
+                            </Select>
+                            <NumericFormat
+                              value={row.amount}
+                              onValueChange={(v) =>
+                                setCombinedPayments((prev) =>
+                                  prev.map((p) => (p.id === row.id ? { ...p, amount: v.value ?? "" } : p))
+                                )
+                              }
+                              thousandSeparator="."
+                              decimalSeparator=","
+                              prefix="$ "
+                              decimalScale={2}
+                              fixedDecimalScale
+                              allowNegative={false}
+                              customInput={TextField}
+                              size="small"
+                              placeholder="0"
+                              sx={{ flex: 1, "& .MuiOutlinedInput-root": { borderRadius: "10px" } }}
+                            />
+                            <IconButton
+                              size="small"
+                              onClick={() =>
+                                setCombinedPayments((prev) => (prev.length > 1 ? prev.filter((p) => p.id !== row.id) : prev))
+                              }
+                              disabled={combinedPayments.length <= 1}
+                              sx={{ color: "#dc2626" }}
+                            >
+                              <Delete fontSize="small" />
+                            </IconButton>
                           </Box>
-                        )
-                      })}
-                    </Box>
+                        ))}
+                        <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5, mt: 0.5 }}>
+                          <Button
+                            size="small"
+                            startIcon={<Add />}
+                            onClick={() =>
+                              setCombinedPayments((prev) => [...prev, { id: Date.now(), payment_method: "cash", amount: "" }])
+                            }
+                            sx={{ textTransform: "none", color: "#d97706" }}
+                          >
+                            Agregar pago
+                          </Button>
+                          {combinedSum < planPrice - 0.01 && (
+                            <Button
+                              size="small"
+                              variant="outlined"
+                              startIcon={<AttachMoney />}
+                              onClick={() => {
+                                const rest = Math.round((planPrice - combinedSum) * 100) / 100
+                                setCombinedPayments((prev) => [...prev, { id: Date.now(), payment_method: "cash", amount: String(rest) }])
+                              }}
+                              sx={{ textTransform: "none", borderColor: "#16a34a", color: "#16a34a" }}
+                            >
+                              Resto en efectivo ({formatPrice(planPrice - combinedSum)})
+                            </Button>
+                          )}
+                        </Box>
+                        <Typography
+                          variant="body2"
+                          sx={{
+                            mt: 1,
+                            fontWeight: 600,
+                            color: combinedOk ? "#16a34a" : combinedSum < planPrice ? "#d97706" : "#dc2626",
+                          }}
+                        >
+                          {combinedOk ? "Total cubierto" : combinedSum < planPrice ? `Falta: ${formatPrice(planPrice - combinedSum)}` : `Excedente: ${formatPrice(combinedSum - planPrice)}`}
+                        </Typography>
+                      </Box>
+                    )}
                   </Box>
 
-                  {paymentMethod === "current_account" && (
+                  {(paymentMethod === "current_account" || (paymentMode === "combined" && combinedPayments.some((p) => p.payment_method === "current_account"))) && (
                     <Box
                       sx={{
                         p: 2,
@@ -1470,7 +1558,7 @@ const Memberships = () => {
               <Button
                 onClick={handleConfirmPayment}
                 variant="contained"
-                disabled={paymentLoading}
+                disabled={paymentLoading || (paymentMode === "combined" && !combinedOk)}
                 sx={{
                   backgroundColor: "#d97706",
                   borderRadius: "10px",
@@ -1487,9 +1575,11 @@ const Memberships = () => {
               >
                 {paymentLoading
                   ? "Procesando..."
-                  : paymentMethod === "current_account"
-                    ? "Registrar a cuenta corriente"
-                    : "Confirmar pago"}
+                  : paymentMode === "combined"
+                    ? "Confirmar pago combinado"
+                    : paymentMethod === "current_account"
+                      ? "Registrar a cuenta corriente"
+                      : "Confirmar pago"}
               </Button>
             </>
           )}

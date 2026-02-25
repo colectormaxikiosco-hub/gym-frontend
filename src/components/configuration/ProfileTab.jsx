@@ -229,6 +229,7 @@ const ProfileTab = () => {
             value={profile.email || ""}
             onChange={(e) => setProfile({ ...profile, email: e.target.value })}
             size="small"
+            placeholder="Opcional"
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
