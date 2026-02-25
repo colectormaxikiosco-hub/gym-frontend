@@ -71,6 +71,8 @@ const Memberships = () => {
   const [paymentMethod, setPaymentMethod] = useState("cash")
   const [paymentMode, setPaymentMode] = useState("single")
   const [combinedPayments, setCombinedPayments] = useState([{ id: 1, payment_method: "cash", amount: "" }])
+  const [discountTypeMembership, setDiscountTypeMembership] = useState("amount")
+  const [discountValueMembership, setDiscountValueMembership] = useState("")
   const [paymentLoading, setPaymentLoading] = useState(false)
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
@@ -199,6 +201,8 @@ const Memberships = () => {
     setPaymentMethod("cash")
     setPaymentMode("single")
     setCombinedPayments([{ id: 1, payment_method: "cash", amount: "" }])
+    setDiscountTypeMembership("amount")
+    setDiscountValueMembership("")
     setFormData({
       client_id: "",
       plan_id: "",
@@ -224,6 +228,8 @@ const Memberships = () => {
     setPaymentMode("single")
     setPaymentMethod("cash")
     setCombinedPayments([{ id: 1, payment_method: "cash", amount: "" }])
+    setDiscountTypeMembership("amount")
+    setDiscountValueMembership("")
     setDialogStep(2)
   }
 
@@ -235,13 +241,14 @@ const Memberships = () => {
   const handleConfirmPayment = async () => {
     if (!pendingMembership) return
     if (paymentMode === "combined" && !combinedOk) {
-      setError("Los pagos deben sumar exactamente el precio del plan.")
+      setError("Los pagos deben sumar exactamente el monto a pagar.")
       return
     }
+    const discountToSend = Math.round(Math.min(discountNumMembership, planPrice) * 100) / 100
     try {
       setPaymentLoading(true)
       setError("")
-      const dataToSend = { ...pendingMembership }
+      const dataToSend = { ...pendingMembership, discount: discountToSend }
       if (paymentMode === "single") {
         dataToSend.payment_method = paymentMethod
       } else {
@@ -496,8 +503,13 @@ const Memberships = () => {
   const selectedPlan = plans.find((p) => p.id === formData.plan_id)
   const planForPayment = plans.find((p) => p.id === pendingMembership?.plan_id)
   const planPrice = planForPayment ? Number(planForPayment.price) : 0
+  const discountNumMembership =
+    discountTypeMembership === "percent"
+      ? (planPrice * Math.min(100, Math.max(0, Number(discountValueMembership) || 0))) / 100
+      : Math.max(0, Number(discountValueMembership) || 0)
+  const amountToPay = Math.max(0, Math.round((planPrice - Math.min(discountNumMembership, planPrice)) * 100) / 100)
   const combinedSum = combinedPayments.reduce((s, p) => s + (Number(p.amount) || 0), 0)
-  const combinedOk = Math.abs(combinedSum - planPrice) < 0.01 && combinedPayments.every((p) => (Number(p.amount) || 0) > 0)
+  const combinedOk = Math.abs(combinedSum - amountToPay) < 0.01 && combinedPayments.every((p) => (Number(p.amount) || 0) > 0)
 
   return (
     <Box className="min-h-screen bg-gradient-to-br from-gray-50 via-amber-50/20 to-gray-50">
@@ -1286,12 +1298,69 @@ const Memberships = () => {
                       })()}
                       <Box>
                         <Typography variant="caption" color="text.secondary">
-                          Total
+                          Precio
                         </Typography>
-                        <Typography variant="body2" fontWeight={600} sx={{ color: "#d97706" }}>
-                          {formatPrice(planForPayment.price)}
+                        <Typography variant="body2" fontWeight={500}>
+                          {formatPrice(planPrice)}
                         </Typography>
                       </Box>
+                      {amountToPay < planPrice && (
+                        <>
+                          <Box>
+                            <Typography variant="caption" color="text.secondary">
+                              Descuento
+                            </Typography>
+                            <Typography variant="body2" fontWeight={600} sx={{ color: "#16a34a" }}>
+                              − {formatPrice(Math.min(discountNumMembership, planPrice))}
+                            </Typography>
+                          </Box>
+                        </>
+                      )}
+                      <Box>
+                        <Typography variant="caption" color="text.secondary">
+                          Total a pagar
+                        </Typography>
+                        <Typography variant="body2" fontWeight={600} sx={{ color: "#d97706" }}>
+                          {formatPrice(amountToPay)}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  </Box>
+
+                  {/* Descuento */}
+                  <Box>
+                    <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 0.5 }}>
+                      Descuento (opcional)
+                    </Typography>
+                    <Box sx={{ display: "flex", gap: 1, alignItems: "center", flexWrap: "wrap" }}>
+                      <Select
+                        size="small"
+                        value={discountTypeMembership}
+                        onChange={(e) => {
+                          setDiscountTypeMembership(e.target.value)
+                          setDiscountValueMembership("")
+                        }}
+                        sx={{ minWidth: 110, "& .MuiOutlinedInput-root": { borderRadius: "10px" } }}
+                      >
+                        <MenuItem value="amount">Monto ($)</MenuItem>
+                        <MenuItem value="percent">Porcentaje (%)</MenuItem>
+                      </Select>
+                      <TextField
+                        size="small"
+                        type="number"
+                        placeholder="0"
+                        value={discountValueMembership}
+                        onChange={(e) => setDiscountValueMembership(e.target.value)}
+                        inputProps={
+                          discountTypeMembership === "percent"
+                            ? { min: 0, max: 100, step: 0.01 }
+                            : { min: 0, step: 0.01 }
+                        }
+                        sx={{
+                          width: discountTypeMembership === "percent" ? 100 : 120,
+                          "& .MuiOutlinedInput-root": { borderRadius: "10px" },
+                        }}
+                      />
                     </Box>
                   </Box>
 
@@ -1371,7 +1440,7 @@ const Memberships = () => {
                     ) : (
                       <Box>
                         <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 1 }}>
-                          Total a cubrir: {formatPrice(planPrice)}
+                          Total a cubrir: {formatPrice(amountToPay)}
                         </Typography>
                         {combinedPayments.map((row) => (
                           <Box key={row.id} sx={{ display: "flex", gap: 1, alignItems: "center", mb: 1 }}>
@@ -1431,18 +1500,18 @@ const Memberships = () => {
                           >
                             Agregar pago
                           </Button>
-                          {combinedSum < planPrice - 0.01 && (
+                          {combinedSum < amountToPay - 0.01 && (
                             <Button
                               size="small"
                               variant="outlined"
                               startIcon={<AttachMoney />}
                               onClick={() => {
-                                const rest = Math.round((planPrice - combinedSum) * 100) / 100
+                                const rest = Math.round((amountToPay - combinedSum) * 100) / 100
                                 setCombinedPayments((prev) => [...prev, { id: Date.now(), payment_method: "cash", amount: String(rest) }])
                               }}
                               sx={{ textTransform: "none", borderColor: "#16a34a", color: "#16a34a" }}
                             >
-                              Resto en efectivo ({formatPrice(planPrice - combinedSum)})
+                              Resto en efectivo ({formatPrice(amountToPay - combinedSum)})
                             </Button>
                           )}
                         </Box>
@@ -1451,10 +1520,10 @@ const Memberships = () => {
                           sx={{
                             mt: 1,
                             fontWeight: 600,
-                            color: combinedOk ? "#16a34a" : combinedSum < planPrice ? "#d97706" : "#dc2626",
+                            color: combinedOk ? "#16a34a" : combinedSum < amountToPay ? "#d97706" : "#dc2626",
                           }}
                         >
-                          {combinedOk ? "Total cubierto" : combinedSum < planPrice ? `Falta: ${formatPrice(planPrice - combinedSum)}` : `Excedente: ${formatPrice(combinedSum - planPrice)}`}
+                          {combinedOk ? "Total cubierto" : combinedSum < amountToPay ? `Falta: ${formatPrice(amountToPay - combinedSum)}` : `Excedente: ${formatPrice(combinedSum - amountToPay)}`}
                         </Typography>
                       </Box>
                     )}

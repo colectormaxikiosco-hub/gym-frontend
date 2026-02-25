@@ -65,7 +65,8 @@ const PointOfSaleTab = ({ onSaleComplete }) => {
   const [products, setProducts] = useState([])
   const [search, setSearch] = useState("")
   const [cart, setCart] = useState([])
-  const [discount, setDiscount] = useState("0")
+  const [discountType, setDiscountType] = useState("amount")
+  const [discountValue, setDiscountValue] = useState("")
   const [paymentMethod, setPaymentMethod] = useState("cash")
   const [paymentMode, setPaymentMode] = useState("single")
   const [combinedPayments, setCombinedPayments] = useState([{ id: 1, payment_method: "cash", amount: "" }])
@@ -141,8 +142,12 @@ const PointOfSaleTab = ({ onSaleComplete }) => {
   }
 
   const subtotal = cart.reduce((sum, c) => sum + Number(c.product.sale_price) * c.quantity, 0)
-  const discountNum = Math.max(0, Number(discount) || 0)
-  const total = Math.max(0, subtotal - discountNum)
+  const rawDiscount =
+    discountType === "percent"
+      ? (subtotal * (Math.min(100, Math.max(0, Number(discountValue) || 0))) / 100)
+      : Math.max(0, Number(discountValue) || 0)
+  const discountNum = Math.min(rawDiscount, subtotal)
+  const total = Math.max(0, Math.round((subtotal - discountNum) * 100) / 100)
 
   const combinedSum = combinedPayments.reduce((s, p) => s + (Number(p.amount) || 0), 0)
   const combinedOk = Math.abs(combinedSum - total) < 0.01 && combinedPayments.every((p) => (Number(p.amount) || 0) > 0)
@@ -193,7 +198,8 @@ const PointOfSaleTab = ({ onSaleComplete }) => {
       setLastSaleId(sale.id)
       setMessage({ type: "success", text: `Venta #${sale.id} registrada correctamente. Total: ${formatPrice(sale.total)}` })
       setCart([])
-      setDiscount("0")
+      setDiscountType("amount")
+      setDiscountValue("")
       setSelectedClient(null)
       setPaymentMode("single")
       setPaymentMethod("cash")
@@ -405,21 +411,53 @@ const PointOfSaleTab = ({ onSaleComplete }) => {
             <Typography variant="body2" fontWeight={600}>{formatPrice(subtotal)}</Typography>
           </Box>
           <Box sx={{ mb: 2 }}>
-            <NumericFormat
-              value={discount}
-              onValueChange={(v) => setDiscount(v.value ?? "0")}
-              thousandSeparator="."
-              decimalSeparator=","
-              prefix="$ "
-              decimalScale={2}
-              fixedDecimalScale
-              allowNegative={false}
-              customInput={TextField}
-              fullWidth
-              size="small"
-              label="Descuento"
-              sx={inputStyles}
-            />
+            <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 0.5 }}>
+              Descuento
+            </Typography>
+            <Box sx={{ display: "flex", gap: 1, alignItems: "center", flexWrap: "wrap" }}>
+              <Select
+                size="small"
+                value={discountType}
+                onChange={(e) => { setDiscountType(e.target.value); setDiscountValue(""); }}
+                sx={{ minWidth: 100, ...inputStyles }}
+              >
+                <MenuItem value="amount">Monto ($)</MenuItem>
+                <MenuItem value="percent">Porcentaje (%)</MenuItem>
+              </Select>
+              {discountType === "amount" ? (
+                <NumericFormat
+                  value={discountValue}
+                  onValueChange={(v) => setDiscountValue(v.value ?? "")}
+                  thousandSeparator="."
+                  decimalSeparator=","
+                  prefix="$ "
+                  decimalScale={2}
+                  fixedDecimalScale
+                  allowNegative={false}
+                  customInput={TextField}
+                  size="small"
+                  placeholder="0"
+                  sx={{ flex: 1, minWidth: 120, ...inputStyles }}
+                />
+              ) : (
+                <NumericFormat
+                  value={discountValue}
+                  onValueChange={(v) => setDiscountValue(v.value ?? "")}
+                  suffix=" %"
+                  decimalScale={2}
+                  allowNegative={false}
+                  customInput={TextField}
+                  size="small"
+                  placeholder="0"
+                  sx={{ flex: 1, minWidth: 100, ...inputStyles }}
+                />
+              )}
+            </Box>
+            {discountNum > 0 && (
+              <Typography variant="caption" sx={{ color: "#16a34a", display: "block", mt: 0.5 }}>
+                − {formatPrice(discountNum)}
+              </Typography>
+            )}
           </Box>
           <Box sx={{ display: "flex", justifyContent: "space-between", mb: 2 }}>
             <Typography variant="subtitle1" fontWeight={700}>Total</Typography>

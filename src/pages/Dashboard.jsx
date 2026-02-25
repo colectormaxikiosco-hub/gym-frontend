@@ -89,6 +89,8 @@ const Dashboard = () => {
   })
   const [pendingMembership, setPendingMembership] = useState(null)
   const [paymentMethod, setPaymentMethod] = useState("cash")
+  const [discountTypeMembership, setDiscountTypeMembership] = useState("amount")
+  const [discountValueMembership, setDiscountValueMembership] = useState("")
   const [paymentLoading, setPaymentLoading] = useState(false)
   const [entryLoadingClientId, setEntryLoadingClientId] = useState(null)
 
@@ -186,6 +188,8 @@ const Dashboard = () => {
     setSelectedClient(null)
     setCreateStep(1)
     setPendingMembership(null)
+    setDiscountTypeMembership("amount")
+    setDiscountValueMembership("")
     setError("")
   }
 
@@ -202,17 +206,29 @@ const Dashboard = () => {
       return
     }
     setPendingMembership({ ...formData })
+    setDiscountTypeMembership("amount")
+    setDiscountValueMembership("")
     setCreateStep(2)
   }
 
+  const planForPayment = plans.find((p) => p.id === pendingMembership?.plan_id)
+  const planPriceNum = planForPayment ? Number(planForPayment.price) : 0
+  const discountNumMembership =
+    discountTypeMembership === "percent"
+      ? (planPriceNum * Math.min(100, Math.max(0, Number(discountValueMembership) || 0))) / 100
+      : Math.max(0, Number(discountValueMembership) || 0)
+  const amountToPayMembership = Math.max(0, Math.round((planPriceNum - Math.min(discountNumMembership, planPriceNum)) * 100) / 100)
+
   const handleConfirmPayment = async () => {
     if (!pendingMembership) return
+    const discountToSend = Math.min(discountNumMembership, planPriceNum)
     setPaymentLoading(true)
     setError("")
     try {
       await membershipService.create({
         ...pendingMembership,
         payment_method: paymentMethod,
+        discount: Math.round(discountToSend * 100) / 100,
       })
       setSuccess("Membresía creada correctamente")
       handleCloseCreateModal()
@@ -228,7 +244,6 @@ const Dashboard = () => {
   }
 
   const selectedPlan = plans.find((p) => p.id === formData.plan_id)
-  const planForPayment = plans.find((p) => p.id === pendingMembership?.plan_id)
 
   const getMembershipBadge = (client) => {
     if (!client.active_membership) {
@@ -840,9 +855,54 @@ const Dashboard = () => {
                         ) : null
                       })()}
                       <Box>
-                        <Typography variant="caption" color="text.secondary">Total</Typography>
-                        <Typography variant="body2" fontWeight={600} sx={{ color: "#d97706" }}>{formatPrice(planForPayment.price)}</Typography>
+                        <Typography variant="caption" color="text.secondary">Precio</Typography>
+                        <Typography variant="body2" fontWeight={500}>{formatPrice(planPriceNum)}</Typography>
                       </Box>
+                      {amountToPayMembership < planPriceNum && (
+                        <Box sx={{ gridColumn: "1 / -1" }}>
+                          <Typography variant="caption" color="text.secondary">Descuento</Typography>
+                          <Typography variant="body2" fontWeight={600} sx={{ color: "#16a34a" }}>− {formatPrice(Math.min(discountNumMembership, planPriceNum))}</Typography>
+                        </Box>
+                      )}
+                      <Box>
+                        <Typography variant="caption" color="text.secondary">Total a pagar</Typography>
+                        <Typography variant="body2" fontWeight={600} sx={{ color: "#d97706" }}>{formatPrice(amountToPayMembership)}</Typography>
+                      </Box>
+                    </Box>
+                  </Box>
+                  <Box>
+                    <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 0.5 }}>Descuento (opcional)</Typography>
+                    <Box sx={{ display: "flex", gap: 1, alignItems: "center", flexWrap: "wrap", mb: 1.5 }}>
+                      <Select
+                        size="small"
+                        value={discountTypeMembership}
+                        onChange={(e) => { setDiscountTypeMembership(e.target.value); setDiscountValueMembership(""); }}
+                        sx={{ minWidth: 110, "& .MuiOutlinedInput-root": { borderRadius: "10px", backgroundColor: "#fafafa" } }}
+                      >
+                        <MenuItem value="amount">Monto ($)</MenuItem>
+                        <MenuItem value="percent">Porcentaje (%)</MenuItem>
+                      </Select>
+                      {discountTypeMembership === "amount" ? (
+                        <TextField
+                          size="small"
+                          type="number"
+                          placeholder="0"
+                          value={discountValueMembership}
+                          onChange={(e) => setDiscountValueMembership(e.target.value)}
+                          inputProps={{ min: 0, step: 0.01 }}
+                          sx={{ width: 120, "& .MuiOutlinedInput-root": { borderRadius: "10px", backgroundColor: "#fafafa" } }}
+                        />
+                      ) : (
+                        <TextField
+                          size="small"
+                          type="number"
+                          placeholder="0"
+                          value={discountValueMembership}
+                          onChange={(e) => setDiscountValueMembership(e.target.value)}
+                          inputProps={{ min: 0, max: 100, step: 0.01 }}
+                          sx={{ width: 100, "& .MuiOutlinedInput-root": { borderRadius: "10px", backgroundColor: "#fafafa" } }}
+                        />
+                      )}
                     </Box>
                   </Box>
                   <Box>
