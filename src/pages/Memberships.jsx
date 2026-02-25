@@ -1042,6 +1042,18 @@ const Memberships = () => {
                   )}
                 </Box>
 
+                {formData.client_id && (() => {
+                  const selectedClientForForm = clients.find((c) => c.id === formData.client_id)
+                  const durationDays = Number(selectedClientForForm?.active_membership?.duration_days ?? 0)
+                  const hasLongActive = durationDays >= 10
+                  if (!hasLongActive) return null
+                  return (
+                    <Alert severity="info" sx={{ borderRadius: "12px" }} icon={<InfoOutlined />}>
+                      Este cliente tiene membresía activa (ej. mensual). Podés agregar una clase (plan por día) sin que pierda la actual.
+                    </Alert>
+                  )
+                })()}
+
                 <FormControl
                   fullWidth
                   required
@@ -1079,11 +1091,15 @@ const Memberships = () => {
                     {plans.length === 0 ? (
                       <MenuItem disabled>No hay planes disponibles</MenuItem>
                     ) : (
-                      plans.map((plan) => (
-                        <MenuItem key={plan.id} value={plan.id}>
-                          {plan.name} - {formatPrice(plan.price)}
-                        </MenuItem>
-                      ))
+                      plans.map((plan) => {
+                        const days = plan.duration_days != null ? plan.duration_days : "-"
+                        return (
+                          <MenuItem key={plan.id} value={plan.id}>
+                            {plan.name} — {formatPrice(plan.price)}
+                            {days !== "-" ? ` (${days} ${Number(days) === 1 ? "día" : "días"})` : ""}
+                          </MenuItem>
+                        )
+                      })
                     )}
                   </Select>
                 </FormControl>

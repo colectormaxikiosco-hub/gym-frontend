@@ -36,6 +36,7 @@ import {
   Badge as BadgeIcon,
   Phone as PhoneIcon,
   Autorenew,
+  Sports,
 } from "@mui/icons-material"
 import { format } from "date-fns"
 import { es } from "date-fns/locale"
@@ -76,6 +77,7 @@ const Dashboard = () => {
 
   const [openCreateModal, setOpenCreateModal] = useState(false)
   const [isRenewalFlow, setIsRenewalFlow] = useState(false)
+  const [isAddClassFlow, setIsAddClassFlow] = useState(false)
   const [selectedClient, setSelectedClient] = useState(null)
   const [plans, setPlans] = useState([])
   const [createStep, setCreateStep] = useState(1)
@@ -116,11 +118,12 @@ const Dashboard = () => {
     if (openCreateModal && selectedClient) {
       const endDate = selectedClient.active_membership?.end_date
       const startDateForRenewal = endDate ? String(endDate).split("T")[0] : new Date().toISOString().split("T")[0]
+      const today = new Date().toISOString().split("T")[0]
       setFormData({
         client_id: selectedClient.id,
         plan_id: "",
         instructor_id: "",
-        start_date: isRenewalFlow ? startDateForRenewal : new Date().toISOString().split("T")[0],
+        start_date: isAddClassFlow ? today : isRenewalFlow ? startDateForRenewal : today,
       })
       setCreateStep(1)
       setPendingMembership(null)
@@ -130,7 +133,7 @@ const Dashboard = () => {
         setPlans(Array.isArray(list) ? list : [])
       }).catch(() => setPlans([]))
     }
-  }, [openCreateModal, selectedClient, isRenewalFlow])
+  }, [openCreateModal, selectedClient, isRenewalFlow, isAddClassFlow])
 
   const getWelcomeMessage = () => {
     if (user?.role === "admin") return "Bienvenido, Administrador"
@@ -147,6 +150,15 @@ const Dashboard = () => {
 
   const handleOpenRenewOrChange = (client) => {
     setIsRenewalFlow(true)
+    setIsAddClassFlow(false)
+    setSelectedClient(client)
+    setOpenCreateModal(true)
+    setError("")
+  }
+
+  const handleOpenAddClass = (client) => {
+    setIsAddClassFlow(true)
+    setIsRenewalFlow(false)
     setSelectedClient(client)
     setOpenCreateModal(true)
     setError("")
@@ -170,6 +182,7 @@ const Dashboard = () => {
   const handleCloseCreateModal = () => {
     setOpenCreateModal(false)
     setIsRenewalFlow(false)
+    setIsAddClassFlow(false)
     setSelectedClient(null)
     setCreateStep(1)
     setPendingMembership(null)
@@ -379,6 +392,7 @@ const Dashboard = () => {
                 const durationDays = Number(client.active_membership?.duration_days ?? 0)
                 const canRegister = hasActive && durationDays > 1
                 const canRenewOrChange = hasActive && durationDays > 5
+                const canAddClass = hasActive && durationDays >= 10
                 return (
                   <Paper
                     key={client.id}
@@ -502,6 +516,27 @@ const Dashboard = () => {
                           >
                             {entryLoadingClientId === client.id ? "Registrando..." : "Registrar entrada"}
                           </Button>
+                          {canAddClass && (
+                            <Button
+                              fullWidth
+                              variant="outlined"
+                              size="medium"
+                              startIcon={<Sports />}
+                              onClick={() => handleOpenAddClass(client)}
+                              sx={{
+                                borderRadius: "12px",
+                                textTransform: "none",
+                                fontWeight: 600,
+                                py: 1.25,
+                                fontSize: "0.9375rem",
+                                borderColor: "#7c3aed",
+                                color: "#6d28d9",
+                                "&:hover": { borderColor: "#6d28d9", backgroundColor: "#f5f3ff" },
+                              }}
+                            >
+                              Tomar clase
+                            </Button>
+                          )}
                           {canRenewOrChange && (
                             <Button
                               fullWidth
@@ -558,6 +593,27 @@ const Dashboard = () => {
                               Membresía activa
                             </Typography>
                           </Box>
+                          {canAddClass && (
+                            <Button
+                              fullWidth
+                              variant="outlined"
+                              size="medium"
+                              startIcon={<Sports />}
+                              onClick={() => handleOpenAddClass(client)}
+                              sx={{
+                                borderRadius: "12px",
+                                textTransform: "none",
+                                fontWeight: 600,
+                                py: 1.25,
+                                fontSize: "0.9375rem",
+                                borderColor: "#7c3aed",
+                                color: "#6d28d9",
+                                "&:hover": { borderColor: "#6d28d9", backgroundColor: "#f5f3ff" },
+                              }}
+                            >
+                              Tomar clase
+                            </Button>
+                          )}
                           {canRenewOrChange && (
                             <Button
                               fullWidth
@@ -611,11 +667,17 @@ const Dashboard = () => {
           <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
             <Box>
               <Typography variant="h6" sx={{ fontWeight: 600, color: "#111827", fontSize: { xs: "1.125rem", sm: "1.25rem" } }}>
-                {createStep === 1 ? (isRenewalFlow ? "Renovar o cambiar membresía" : "Nueva membresía") : "Confirmar pago"}
+                {createStep === 1
+                  ? (isAddClassFlow ? "Agregar clase" : isRenewalFlow ? "Renovar o cambiar membresía" : "Nueva membresía")
+                  : "Confirmar pago"}
               </Typography>
               <Typography variant="body2" sx={{ color: "#6b7280", mt: 0.25 }}>
                 {createStep === 1
-                  ? (isRenewalFlow ? "La nueva membresía comenzará al vencer la actual" : "Cliente preseleccionado desde el inicio")
+                  ? (isAddClassFlow
+                    ? "No pierde su membresía actual"
+                    : isRenewalFlow
+                      ? "La nueva membresía comenzará al vencer la actual"
+                      : "Cliente preseleccionado desde el inicio")
                   : "Paso 2 de 2 — Método de pago"}
               </Typography>
             </Box>
