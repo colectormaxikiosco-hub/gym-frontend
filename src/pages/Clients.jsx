@@ -36,6 +36,7 @@ import { useNavigate } from "react-router-dom"
 import clientService from "../services/clientService"
 import { format } from "date-fns"
 import { es } from "date-fns/locale"
+import { parseDateOnly } from "../utils/dateUtils"
 import CurrentAccountDialog from "../components/clients/CurrentAccountDialog"
 import ClientDetailDialog from "../components/clients/ClientDetailDialog"
 import { useDebounce } from "../hooks/useDebounce"
@@ -604,7 +605,7 @@ const Clients = () => {
                               ? "1 día restante"
                               : `${daysRemaining} días restantes`
                     const untilDate = membershipEndDate
-                      ? format(new Date(membershipEndDate), "dd/MM/yyyy", { locale: es })
+                      ? format(parseDateOnly(membershipEndDate), "dd/MM/yyyy", { locale: es })
                       : ""
                     return (
                       <TableRow
@@ -667,7 +668,7 @@ const Clients = () => {
                               </Typography>
                               {client.expired_membership?.end_date && (
                                 <Typography variant="caption" sx={{ fontWeight: 500, color: "#991b1b", fontSize: "0.7rem" }}>
-                                  Venció {format(new Date(client.expired_membership.end_date), "dd/MM/yyyy", { locale: es })}
+                                  Venció {format(parseDateOnly(client.expired_membership.end_date), "dd/MM/yyyy", { locale: es })}
                                 </Typography>
                               )}
                             </Box>

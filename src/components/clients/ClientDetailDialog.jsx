@@ -31,18 +31,22 @@ import {
 } from "@mui/icons-material"
 import { format } from "date-fns"
 import { es } from "date-fns/locale"
+import { parseDateOnly, parseTimestamp } from "../utils/dateUtils"
 import clientService from "../../services/clientService"
 import entryService from "../../services/entryService"
 import { NumericFormat } from "react-number-format"
 
 const formatDate = (date) => {
   if (!date) return "—"
-  return format(new Date(date), "dd/MM/yyyy", { locale: es })
+  const dateOnly = /^\d{4}-\d{2}-\d{2}(T|$)/.test(String(date).trim())
+  const d = dateOnly ? parseDateOnly(date) : new Date(date)
+  return format(d, "dd/MM/yyyy", { locale: es })
 }
 
 const formatDateTime = (date) => {
   if (!date) return "—"
-  return format(new Date(date), "dd/MM/yyyy HH:mm", { locale: es })
+  const d = parseTimestamp(date) || new Date(date)
+  return format(d, "dd/MM/yyyy HH:mm", { locale: es })
 }
 
 export default function ClientDetailDialog({

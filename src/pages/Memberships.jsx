@@ -51,6 +51,7 @@ import { useNavigate, useLocation } from "react-router-dom"
 import { format } from "date-fns"
 import { es } from "date-fns/locale"
 import { NumericFormat } from "react-number-format"
+import { parseDateOnly, getTodayLocalISO } from "../utils/dateUtils"
 import membershipService from "../services/membershipService"
 import planService from "../services/planService"
 import clientService from "../services/clientService"
@@ -95,7 +96,7 @@ const Memberships = () => {
     client_id: "",
     plan_id: "",
     instructor_id: "",
-    start_date: new Date().toISOString().split("T")[0],
+    start_date: getTodayLocalISO(),
   })
 
   const loadData = useCallback(async () => {
@@ -182,7 +183,7 @@ const Memberships = () => {
       client_id: "",
       plan_id: "",
       instructor_id: "",
-      start_date: new Date().toISOString().split("T")[0],
+      start_date: getTodayLocalISO(),
     })
     setDialogStep(1)
     setPendingMembership(null)
@@ -497,7 +498,9 @@ const Memberships = () => {
 
   const formatDate = (date) => {
     if (!date) return "-"
-    return format(new Date(date), "dd/MM/yyyy", { locale: es })
+    const dateOnly = /^\d{4}-\d{2}-\d{2}(T|$)/.test(String(date).trim())
+    const d = dateOnly ? parseDateOnly(date) : new Date(date)
+    return format(d, "dd/MM/yyyy", { locale: es })
   }
 
   const selectedPlan = plans.find((p) => p.id === formData.plan_id)
@@ -986,7 +989,7 @@ const Memberships = () => {
                     onChange={(_, newValue) => {
                       const startDate = newValue?.active_membership?.end_date
                         ? String(newValue.active_membership.end_date).split("T")[0]
-                        : new Date().toISOString().split("T")[0]
+                        : getTodayLocalISO()
                       setFormData({
                         ...formData,
                         client_id: newValue ? newValue.id : "",
@@ -1029,7 +1032,7 @@ const Memberships = () => {
                     renderOption={(props, option) => {
                       const hasActive = option.active_membership != null
                       const untilDate = option.active_membership?.end_date
-                        ? format(new Date(option.active_membership.end_date), "dd/MM/yyyy", { locale: es })
+                        ? format(parseDateOnly(option.active_membership.end_date), "dd/MM/yyyy", { locale: es })
                         : ""
                       return (
                         <li {...props} key={option.id}>

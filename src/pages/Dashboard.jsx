@@ -40,6 +40,7 @@ import {
 } from "@mui/icons-material"
 import { format } from "date-fns"
 import { es } from "date-fns/locale"
+import { parseDateOnly, getTodayLocalISO } from "../utils/dateUtils"
 import { useAuth } from "../context/AuthContext"
 import clientService from "../services/clientService"
 import planService from "../services/planService"
@@ -56,7 +57,9 @@ const formatPrice = (price) =>
 
 const formatDate = (date) => {
   if (!date) return "-"
-  return format(new Date(date), "dd/MM/yyyy", { locale: es })
+  const dateOnly = /^\d{4}-\d{2}-\d{2}(T|$)/.test(String(date).trim())
+  const d = dateOnly ? parseDateOnly(date) : new Date(date)
+  return format(d, "dd/MM/yyyy", { locale: es })
 }
 
 const PAYMENT_METHODS = [
@@ -85,7 +88,7 @@ const Dashboard = () => {
     client_id: "",
     plan_id: "",
     instructor_id: "",
-    start_date: new Date().toISOString().split("T")[0],
+    start_date: getTodayLocalISO(),
   })
   const [pendingMembership, setPendingMembership] = useState(null)
   const [paymentMethod, setPaymentMethod] = useState("cash")
@@ -119,8 +122,8 @@ const Dashboard = () => {
   useEffect(() => {
     if (openCreateModal && selectedClient) {
       const endDate = selectedClient.active_membership?.end_date
-      const startDateForRenewal = endDate ? String(endDate).split("T")[0] : new Date().toISOString().split("T")[0]
-      const today = new Date().toISOString().split("T")[0]
+      const startDateForRenewal = endDate ? String(endDate).split("T")[0] : getTodayLocalISO()
+      const today = getTodayLocalISO()
       setFormData({
         client_id: selectedClient.id,
         plan_id: "",
