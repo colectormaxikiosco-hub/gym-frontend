@@ -321,7 +321,7 @@ const Clients = () => {
       if (phone && msg) {
         const url = getWhatsAppWebUrl(phone, msg)
         window.open(url, "_blank", "noopener,noreferrer")
-        setMessage({ type: "success", text: "Se generó una nueva contraseña. Se abrió WhatsApp con el mensaje listo para enviar." })
+        setMessage({ type: "success", text: "La contraseña es el DNI del cliente. Se abrió WhatsApp con el mensaje listo para enviar." })
       } else {
         setMessage({ type: "error", text: res?.message || "No se pudo preparar el mensaje." })
       }
