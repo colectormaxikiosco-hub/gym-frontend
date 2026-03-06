@@ -30,7 +30,7 @@ import {
   Checkbox,
   Tooltip,
 } from "@mui/material"
-import { Add, Edit, AccountBalance, Search, Refresh, Close, Person, Badge, Phone, Home, Lock, DriveFileRenameOutline, Visibility, PersonOff, Chat } from "@mui/icons-material"
+import { Add, Edit, AccountBalance, Search, Refresh, Close, Person, Badge, Phone, Home, Lock, DriveFileRenameOutline, Visibility, PersonOff, Chat, Send } from "@mui/icons-material"
 import { NumericFormat } from "react-number-format"
 import { useNavigate } from "react-router-dom"
 import clientService from "../services/clientService"
@@ -76,6 +76,7 @@ const Clients = () => {
   const [selectedClientForAccount, setSelectedClientForAccount] = useState(null)
   const [openDetailDialog, setOpenDetailDialog] = useState(false)
   const [selectedClientForDetail, setSelectedClientForDetail] = useState(null)
+  const [resendWhatsAppClientId, setResendWhatsAppClientId] = useState(null)
   const [openWhatsAppConfirmDialog, setOpenWhatsAppConfirmDialog] = useState(false)
   const [whatsAppConfirmData, setWhatsAppConfirmData] = useState(null)
   const [openMembershipReminderDialog, setOpenMembershipReminderDialog] = useState(false)
@@ -303,6 +304,32 @@ const Clients = () => {
   const handleCloseDetail = () => {
     setOpenDetailDialog(false)
     setSelectedClientForDetail(null)
+  }
+
+  const handleResendWelcomeWhatsApp = async (client) => {
+    if (!client?.phone?.toString?.()?.trim?.()) {
+      setMessage({ type: "error", text: "El cliente no tiene teléfono registrado. Agregá un teléfono para reenviar las credenciales." })
+      return
+    }
+    setResendWhatsAppClientId(client.id)
+    setMessage({ type: "", text: "" })
+    try {
+      const res = await clientService.resendWelcomeWhatsApp(client.id)
+      const data = res?.data ?? res
+      const phone = data?.phone
+      const msg = data?.message
+      if (phone && msg) {
+        const url = getWhatsAppWebUrl(phone, msg)
+        window.open(url, "_blank", "noopener,noreferrer")
+        setMessage({ type: "success", text: "Se generó una nueva contraseña. Se abrió WhatsApp con el mensaje listo para enviar." })
+      } else {
+        setMessage({ type: "error", text: res?.message || "No se pudo preparar el mensaje." })
+      }
+    } catch (err) {
+      setMessage({ type: "error", text: err.response?.data?.message || "Error al reenviar credenciales por WhatsApp." })
+    } finally {
+      setResendWhatsAppClientId(null)
+    }
   }
 
   const formatDate = (date) => {
@@ -758,6 +785,19 @@ const Clients = () => {
                                 aria-label="Recordar membresía por WhatsApp"
                               >
                                 <Chat fontSize="small" />
+                              </IconButton>
+                            </Tooltip>
+                          )}
+                          {client.phone && (
+                            <Tooltip title="Reenviar credenciales por WhatsApp">
+                              <IconButton
+                                size="small"
+                                onClick={() => handleResendWelcomeWhatsApp(client)}
+                                disabled={resendWhatsAppClientId === client.id}
+                                sx={{ color: "#25D366", "&:hover": { backgroundColor: "#dcfce7" } }}
+                                aria-label="Reenviar credenciales por WhatsApp"
+                              >
+                                <Send fontSize="small" />
                               </IconButton>
                             </Tooltip>
                           )}
@@ -1292,6 +1332,7 @@ const Clients = () => {
           setOpenDetailDialog(false)
           navigate("/memberships", { state: { renewClient: client } })
         }}
+        onResendWelcomeWhatsApp={handleResendWelcomeWhatsApp}
         onDelete={handleDeleteClient}
         onRefresh={loadClients}
       />

@@ -28,6 +28,7 @@ import {
   Delete,
   Login as LoginIcon,
   Autorenew,
+  Send,
 } from "@mui/icons-material"
 import { format } from "date-fns"
 import { es } from "date-fns/locale"
@@ -56,6 +57,7 @@ export default function ClientDetailDialog({
   onEdit,
   onCurrentAccount,
   onRenewOrChange,
+  onResendWelcomeWhatsApp,
   onDelete,
   onRefresh,
 }) {
@@ -344,6 +346,25 @@ export default function ClientDetailDialog({
                     >
                       Cuenta corriente
                     </Button>
+                    {(detailClient?.phone || rowClient?.phone) && (
+                      <Button
+                        variant="outlined"
+                        size="small"
+                        startIcon={<Send />}
+                        onClick={() => onResendWelcomeWhatsApp?.(detailClient ?? rowClient)}
+                        sx={{
+                          color: "#25D366",
+                          borderColor: "#bbf7d0",
+                          borderRadius: "10px",
+                          textTransform: "none",
+                          fontWeight: 600,
+                          fontSize: "0.8125rem",
+                          "&:hover": { borderColor: "#86efac", backgroundColor: "#dcfce7" },
+                        }}
+                      >
+                        Reenviar credenciales por WhatsApp
+                      </Button>
+                    )}
                     {(detailClient?.active_membership ?? rowClient?.active_membership) &&
                      Number((detailClient?.active_membership ?? rowClient?.active_membership)?.duration_days ?? 0) > 5 && (
                       <Button

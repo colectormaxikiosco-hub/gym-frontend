@@ -86,6 +86,16 @@ const clientService = {
     return response.data
   },
 
+  /**
+   * Reenviar mensaje de bienvenida por WhatsApp: genera contraseña temporal y devuelve mensaje y teléfono para abrir wa.me
+   * @param {number|string} id - ID del cliente
+   * @returns {{ success: boolean, message: string, data: { message: string, phone: string } }}
+   */
+  resendWelcomeWhatsApp: async (id) => {
+    const response = await api.post(`${API_ENDPOINTS.CLIENTS}/${id}/resend-welcome-whatsapp`)
+    return response.data
+  },
+
   getMyProfile: async () => {
     const response = await api.get(API_ENDPOINTS.CLIENT_PROFILE)
     return response.data
