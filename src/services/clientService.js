@@ -2,11 +2,29 @@ import api from "./api"
 import { API_ENDPOINTS } from "../config/api"
 
 const clientService = {
-  /** Lista todos los clientes activos (para selects, crear membresía, etc.). Devuelve array (hasta 1000). */
+  /**
+   * Lista todos los clientes activos (para selects, crear membresía, etc.).
+   * Devuelve un array con **todos** los clientes activos (paginando internamente).
+   */
   getAll: async () => {
-    const response = await api.get(API_ENDPOINTS.CLIENTS, { params: { page: 1, limit: 1000, active_filter: "active" } })
-    const body = response.data
-    return Array.isArray(body) ? body : body?.data ?? []
+    const all = []
+    let page = 1
+    let totalPages = 1
+
+    do {
+      const response = await api.get(API_ENDPOINTS.CLIENTS, {
+        params: { page, limit: 100, active_filter: "active" },
+      })
+      const body = response.data
+      const data = Array.isArray(body?.data) ? body.data : []
+      const pagination = body?.pagination ?? { page, totalPages: page }
+
+      all.push(...data)
+      totalPages = Number(pagination.totalPages) || page
+      page += 1
+    } while (page <= totalPages)
+
+    return all
   },
 
   /** @deprecated Usar getClientsPaginated para la lista con paginación. Devuelve array. */
