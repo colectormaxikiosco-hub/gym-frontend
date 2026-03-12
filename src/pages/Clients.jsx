@@ -37,6 +37,7 @@ import clientService from "../services/clientService"
 import { format } from "date-fns"
 import { es } from "date-fns/locale"
 import { parseDateOnly } from "../utils/dateUtils"
+import { formatMembershipTimeRemaining } from "../utils/membershipUtils"
 import CurrentAccountDialog from "../components/clients/CurrentAccountDialog"
 import ClientDetailDialog from "../components/clients/ClientDetailDialog"
 import { useDebounce } from "../hooks/useDebounce"
@@ -84,7 +85,7 @@ const Clients = () => {
   const [dialogError, setDialogError] = useState("")
 
   const debouncedSearchTerm = useDebounce(searchTerm, 500)
-  const pagination = usePagination({ limit: 10, rowsPerPageOptions: [5, 10, 25, 50] })
+  const pagination = usePagination({ limit: 10, rowsPerPageOptions: [5, 10, 25, 50, 100] })
   const prevSearchRef = useRef(debouncedSearchTerm)
   const prevDebtFilterRef = useRef(debtFilter)
   const prevShowInactiveRef = useRef(showInactiveOnly)
@@ -102,9 +103,14 @@ const Clients = () => {
     const pageToLoad = searchChanged || filterChanged || inactiveFilterChanged || daysFilterChanged ? 1 : pagination.page
     try {
       setLoading(true)
+      // Al buscar, pedir más resultados por página para que aparezcan todos los que coincidan (hasta 100)
+      const effectiveLimit =
+        debouncedSearchTerm.trim()
+          ? Math.max(pagination.limit, 100)
+          : pagination.limit
       const { data, pagination: resPagination } = await clientService.getClientsPaginated({
         page: pageToLoad,
-        limit: pagination.limit,
+        limit: effectiveLimit,
         search: debouncedSearchTerm,
         debt_filter: debtFilter,
         include_active_membership: !showInactiveOnly,
@@ -624,13 +630,9 @@ const Clients = () => {
                     const daysText =
                       hasExpiredMembership && !hasActiveMembership
                         ? "Vencida"
-                        : daysRemaining === undefined || daysRemaining === null
-                          ? "Activa"
-                          : daysRemaining === 0
-                            ? "Vence hoy"
-                            : daysRemaining === 1
-                              ? "1 día restante"
-                              : `${daysRemaining} días restantes`
+                        : hasActiveMembership
+                          ? formatMembershipTimeRemaining(client.active_membership).label
+                          : "Activa"
                     const untilDate = membershipEndDate
                       ? format(parseDateOnly(membershipEndDate), "dd/MM/yyyy", { locale: es })
                       : ""
@@ -701,11 +703,18 @@ const Clients = () => {
                             </Box>
                           ) : hasActiveMembership ? (
                             (() => {
-                              const dur = Number(client.active_membership?.duration_days)
-                              const d = Number(client.active_membership?.days_remaining)
-                              const isShortPlan = dur <= 5
-                              const isRed = !isShortPlan && (d === 1 || d === 0)
-                              const isOrange = !isShortPlan && [2, 3, 4, 5].includes(d)
+                              const m = client.active_membership
+                              const isHourPlan = Number(m?.duration_hours) > 0
+                              const minutesRem = m?.minutes_remaining
+                              const dur = Number(m?.duration_days)
+                              const d = Number(m?.days_remaining)
+                              const isShortPlan = !isHourPlan && dur <= 5
+                              const isRed = isHourPlan
+                                ? (typeof minutesRem === "number" && minutesRem <= 30)
+                                : !isShortPlan && (d === 1 || d === 0)
+                              const isOrange = isHourPlan
+                                ? (typeof minutesRem === "number" && minutesRem > 30 && minutesRem <= 60)
+                                : !isShortPlan && [2, 3, 4, 5].includes(d)
                               const bg = isRed ? "#fee2e2" : isOrange ? "#ffedd5" : "#dcfce7"
                               const border = isRed ? "#fca5a5" : isOrange ? "#fdba74" : "#86efac"
                               const colorMain = isRed ? "#991b1b" : isOrange ? "#c2410c" : "#166534"

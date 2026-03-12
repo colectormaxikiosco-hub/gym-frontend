@@ -52,6 +52,7 @@ import { format } from "date-fns"
 import { es } from "date-fns/locale"
 import { NumericFormat } from "react-number-format"
 import { parseDateOnly, getTodayLocalISO } from "../utils/dateUtils"
+import { formatMembershipTimeRemaining, formatMembershipPlanDuration, formatPlanDuration } from "../utils/membershipUtils"
 import membershipService from "../services/membershipService"
 import planService from "../services/planService"
 import clientService from "../services/clientService"
@@ -311,8 +312,12 @@ const Memberships = () => {
 
   const getMembershipRowStyle = (membership) => {
     const status = membership.status
+    const durationHours = Number(membership.plan_duration_hours)
     const durationDays = Number(membership.plan_duration)
+    const isHourPlan = !Number.isNaN(durationHours) && durationHours > 0
+    const minutesRem = membership.minutes_remaining
     const days = Number(membership.days_remaining)
+    const effectiveDays = isHourPlan && typeof minutesRem === "number" ? (minutesRem <= 0 ? 0 : (minutesRem < 60 ? 1 : 2)) : days
 
     if (status === "cancelled") {
       return {
@@ -330,25 +335,48 @@ const Memberships = () => {
       }
     }
 
-    if (status === "active" && durationDays > 5) {
-      if (days <= 1) {
+    if (status === "active") {
+      if (isHourPlan) {
+        if (typeof minutesRem === "number" && minutesRem <= 30) {
+          return {
+            backgroundColor: "#fef2f2",
+            borderLeft: "3px solid #dc2626",
+            "&:hover": { backgroundColor: "#fee2e2" },
+          }
+        }
+        if (typeof minutesRem === "number" && minutesRem <= 60) {
+          return {
+            backgroundColor: "#fff7ed",
+            borderLeft: "3px solid #ea580c",
+            "&:hover": { backgroundColor: "#ffedd5" },
+          }
+        }
         return {
-          backgroundColor: "#fef2f2",
-          borderLeft: "3px solid #dc2626",
-          "&:hover": { backgroundColor: "#fee2e2" },
+          backgroundColor: "#f0fdf4",
+          borderLeft: "3px solid #16a34a",
+          "&:hover": { backgroundColor: "#dcfce7" },
         }
       }
-      if ([2, 3, 4, 5].includes(days)) {
-        return {
-          backgroundColor: "#fff7ed",
-          borderLeft: "3px solid #ea580c",
-          "&:hover": { backgroundColor: "#ffedd5" },
+      if (durationDays > 5) {
+        if (effectiveDays <= 1) {
+          return {
+            backgroundColor: "#fef2f2",
+            borderLeft: "3px solid #dc2626",
+            "&:hover": { backgroundColor: "#fee2e2" },
+          }
         }
-      }
-      return {
-        backgroundColor: "#f0fdf4",
-        borderLeft: "3px solid #16a34a",
-        "&:hover": { backgroundColor: "#dcfce7" },
+        if ([2, 3, 4, 5].includes(effectiveDays)) {
+          return {
+            backgroundColor: "#fff7ed",
+            borderLeft: "3px solid #ea580c",
+            "&:hover": { backgroundColor: "#ffedd5" },
+          }
+        }
+        return {
+          backgroundColor: "#f0fdf4",
+          borderLeft: "3px solid #16a34a",
+          "&:hover": { backgroundColor: "#dcfce7" },
+        }
       }
     }
 
@@ -361,6 +389,7 @@ const Memberships = () => {
 
   const getEndDateBadge = (membership) => {
     const status = membership.status
+    const { label: timeLabel } = formatMembershipTimeRemaining(membership)
     const days = typeof membership.days_remaining === "number" ? membership.days_remaining : null
 
     if (status === "expired") {
@@ -396,23 +425,17 @@ const Memberships = () => {
 
     if (status === "active") {
       const dur = Number(membership.plan_duration)
-      const isShortPlan = dur <= 5
+      const isHourPlan = Number(membership.plan_duration_hours) > 0
+      const isShortPlan = !isHourPlan && dur <= 5
       const d = days
-      const isRed = !isShortPlan && (d === 1 || d === 0)
-      const isOrange = !isShortPlan && [2, 3, 4, 5].includes(d)
+      const isRed = isHourPlan ? (typeof membership.minutes_remaining === "number" && membership.minutes_remaining <= 30) : (!isShortPlan && (d === 1 || d === 0))
+      const isOrange = isHourPlan ? (typeof membership.minutes_remaining === "number" && membership.minutes_remaining > 30 && membership.minutes_remaining <= 60) : (!isShortPlan && [2, 3, 4, 5].includes(d))
       const bg = isRed ? "#fee2e2" : isOrange ? "#ffedd5" : "#dcfce7"
       const border = isRed ? "#fca5a5" : isOrange ? "#fdba74" : "#86efac"
       const colorMain = isRed ? "#991b1b" : isOrange ? "#c2410c" : "#166534"
       const colorSub = isRed ? "#b91c1c" : isOrange ? "#ea580c" : "#15803d"
 
-      let daysLabel = "Activa"
-      if (d === 0) {
-        daysLabel = "Vence hoy"
-      } else if (d === 1) {
-        daysLabel = "1 día restante"
-      } else if (typeof d === "number") {
-        daysLabel = `${d} días restantes`
-      }
+      const daysLabel = timeLabel
 
       return (
         <Box
@@ -796,7 +819,7 @@ const Memberships = () => {
                             {membership.plan_name}
                           </Typography>
                           <Typography variant="caption" color="text.secondary">
-                            {membership.plan_duration} días
+                            {formatMembershipPlanDuration(membership)}
                             {membership.instructor_name ? ` • ${membership.instructor_name}` : ""}
                           </Typography>
                         </Box>
@@ -1106,15 +1129,11 @@ const Memberships = () => {
                     {plans.length === 0 ? (
                       <MenuItem disabled>No hay planes disponibles</MenuItem>
                     ) : (
-                      plans.map((plan) => {
-                        const days = plan.duration_days != null ? plan.duration_days : "-"
-                        return (
-                          <MenuItem key={plan.id} value={plan.id}>
-                            {plan.name} — {formatPrice(plan.price)}
-                            {days !== "-" ? ` (${days} ${Number(days) === 1 ? "día" : "días"})` : ""}
-                          </MenuItem>
-                        )
-                      })
+                      plans.map((plan) => (
+                        <MenuItem key={plan.id} value={plan.id}>
+                          {plan.name} — {formatPrice(plan.price)} ({formatPlanDuration(plan)})
+                        </MenuItem>
+                      ))
                     )}
                   </Select>
                 </FormControl>
@@ -1222,7 +1241,7 @@ const Memberships = () => {
                           Duración:
                         </Typography>
                         <Typography variant="body2" fontWeight={500}>
-                          {selectedPlan.duration_days} días
+                          {formatPlanDuration(selectedPlan)}
                         </Typography>
                       </Box>
                       <Box sx={{ display: "flex", justifyContent: "space-between" }}>
@@ -1281,7 +1300,7 @@ const Memberships = () => {
                           Duración
                         </Typography>
                         <Typography variant="body2" fontWeight={500}>
-                          {planForPayment.duration_days} días
+                          {formatPlanDuration(planForPayment)}
                         </Typography>
                       </Box>
                       {pendingMembership?.instructor_id && (() => {

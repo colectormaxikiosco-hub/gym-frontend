@@ -31,6 +31,7 @@ import clientService from "../../services/clientService"
 import { format } from "date-fns"
 import { es } from "date-fns/locale"
 import CurrentAccountDialog from "./CurrentAccountDialog"
+import { formatMembershipTimeRemaining } from "../../utils/membershipUtils"
 import {
   normalizePhoneForWhatsApp,
   getWelcomeMessageWhatsApp,
@@ -364,21 +365,20 @@ const ClientsManagementTab = () => {
           <TableBody>
             {clients.map((client) => {
               const hasExpired = !!client.expired_membership && !client.active_membership
-              const daysRemaining = client.active_membership?.days_remaining
-              const durationDays = Number(client.active_membership?.duration_days)
+              const m = client.active_membership
+              const hasMembership = !!m
               const daysText = hasExpired
                 ? "Vencida"
-                : daysRemaining === undefined || daysRemaining === null
-                  ? "—"
-                  : daysRemaining === 0
-                    ? "Vence hoy"
-                    : daysRemaining === 1
-                      ? "1 día"
-                      : `${daysRemaining} días`
-              const hasMembership = !!client.active_membership
-              const isShortPlan = durationDays <= 5
-              const isRed = hasMembership && !isShortPlan && (Number(daysRemaining) === 1 || Number(daysRemaining) === 0)
-              const isOrange = hasMembership && !isShortPlan && [2, 3, 4, 5].includes(Number(daysRemaining))
+                : hasMembership
+                  ? formatMembershipTimeRemaining(m).label
+                  : "—"
+              const isHourPlan = Number(m?.duration_hours) > 0
+              const minutesRem = m?.minutes_remaining
+              const durationDays = Number(m?.duration_days)
+              const daysRemaining = m?.days_remaining
+              const isShortPlan = !isHourPlan && durationDays <= 5
+              const isRed = hasMembership && (isHourPlan ? (typeof minutesRem === "number" && minutesRem <= 30) : !isShortPlan && (Number(daysRemaining) === 1 || Number(daysRemaining) === 0))
+              const isOrange = hasMembership && (isHourPlan ? (typeof minutesRem === "number" && minutesRem > 30 && minutesRem <= 60) : !isShortPlan && [2, 3, 4, 5].includes(Number(daysRemaining)))
               const isExpiredBadge = hasExpired
               const badgeBg = isExpiredBadge ? "#fecaca" : isRed ? "#fee2e2" : isOrange ? "#ffedd5" : hasMembership ? "#d1fae5" : "transparent"
               const badgeColor = isExpiredBadge ? "#7f1d1d" : isRed ? "#991b1b" : isOrange ? "#c2410c" : hasMembership ? "#065f46" : "#6b7280"

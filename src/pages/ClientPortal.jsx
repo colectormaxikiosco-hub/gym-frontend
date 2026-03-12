@@ -9,6 +9,7 @@ import { es } from "date-fns/locale"
 import clientService from "../services/clientService"
 import noticeService from "../services/noticeService"
 import classService from "../services/classService"
+import { formatMembershipTimeRemaining } from "../utils/membershipUtils"
 
 const formatDate = (date) => {
   if (!date) return "—"
@@ -80,13 +81,10 @@ const ClientPortal = () => {
   }
 
   const membership = profile?.active_membership ?? null
-  const daysRemaining = membership?.days_remaining
 
   const getDaysRemainingText = () => {
-    if (daysRemaining == null) return ""
-    if (daysRemaining === 0) return "Vence hoy"
-    if (daysRemaining === 1) return "1 día restante"
-    return `${daysRemaining} días restantes`
+    if (!membership) return ""
+    return formatMembershipTimeRemaining(membership).label
   }
 
   if (loading) {

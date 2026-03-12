@@ -20,6 +20,7 @@ import {
   Alert,
   InputAdornment,
   Autocomplete,
+  MenuItem,
 } from "@mui/material"
 import {
   Add,
@@ -37,6 +38,7 @@ import {
 import { NumericFormat } from "react-number-format"
 import planService from "../../services/planService"
 import instructorService from "../../services/instructorService"
+import { formatPlanDuration } from "../../utils/membershipUtils"
 
 const PlansTab = () => {
   const [plans, setPlans] = useState([])
@@ -49,7 +51,8 @@ const PlansTab = () => {
 
   const [formData, setFormData] = useState({
     name: "",
-    duration_days: "",
+    duration_type: "days",
+    duration_value: "",
     price: "",
     description: "",
     instructor_ids: [],
@@ -85,9 +88,11 @@ const PlansTab = () => {
   const handleOpenDialog = (plan = null) => {
     if (plan) {
       setEditingPlan(plan)
+      const hasHours = plan.duration_hours != null && Number(plan.duration_hours) > 0
       setFormData({
         name: plan.name,
-        duration_days: plan.duration_days,
+        duration_type: hasHours ? "hours" : "days",
+        duration_value: hasHours ? String(plan.duration_hours) : String(plan.duration_days ?? ""),
         price: plan.price,
         description: plan.description || "",
         instructor_ids: (plan.instructors || []).map((i) => i.id),
@@ -96,7 +101,8 @@ const PlansTab = () => {
       setEditingPlan(null)
       setFormData({
         name: "",
-        duration_days: "",
+        duration_type: "days",
+        duration_value: "",
         price: "",
         description: "",
         instructor_ids: [],
@@ -110,7 +116,8 @@ const PlansTab = () => {
     setEditingPlan(null)
     setFormData({
       name: "",
-      duration_days: "",
+      duration_type: "days",
+      duration_value: "",
       price: "",
       description: "",
       instructor_ids: [],
@@ -121,9 +128,16 @@ const PlansTab = () => {
   const handleSubmit = async () => {
     try {
       setError("")
+      const isHours = formData.duration_type === "hours"
+      const value = Number(formData.duration_value)
+      if (!formData.duration_value || value <= 0) {
+        setError(isHours ? "La duración en horas debe ser mayor a 0" : "La duración en días debe ser mayor a 0")
+        return
+      }
       const payload = {
         name: formData.name,
-        duration_days: formData.duration_days,
+        duration_days: isHours ? 0 : value,
+        duration_hours: isHours ? value : 0,
         price: formData.price,
         description: formData.description,
         instructor_ids: formData.instructor_ids || [],
@@ -356,7 +370,7 @@ const PlansTab = () => {
                   </TableCell>
                   <TableCell>
                     <Typography variant="body2">
-                      {plan.duration_days} {plan.duration_days === 1 ? "día" : "días"}
+                      {formatPlanDuration(plan)}
                     </Typography>
                   </TableCell>
                   <TableCell>
@@ -533,23 +547,37 @@ const PlansTab = () => {
               sx={inputStyles}
             />
 
-            <TextField
-              fullWidth
-              label="Duración (días)"
-              type="number"
-              value={formData.duration_days}
-              onChange={(e) => setFormData({ ...formData, duration_days: e.target.value })}
-              size="small"
-              required
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <CalendarMonth sx={{ color: "#9ca3af", fontSize: 20 }} />
-                  </InputAdornment>
-                ),
-              }}
-              sx={inputStyles}
-            />
+            <Box sx={{ display: "flex", gap: 1.5, alignItems: "flex-start" }}>
+              <TextField
+                select
+                label="Duración por"
+                value={formData.duration_type}
+                onChange={(e) => setFormData({ ...formData, duration_type: e.target.value, duration_value: "" })}
+                size="small"
+                sx={{ minWidth: 120, ...inputStyles }}
+              >
+                <MenuItem value="days">Días</MenuItem>
+                <MenuItem value="hours">Horas</MenuItem>
+              </TextField>
+              <TextField
+                fullWidth
+                label={formData.duration_type === "hours" ? "Cantidad de horas" : "Cantidad de días"}
+                type="number"
+                inputProps={{ min: 1 }}
+                value={formData.duration_value}
+                onChange={(e) => setFormData({ ...formData, duration_value: e.target.value })}
+                size="small"
+                required
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <CalendarMonth sx={{ color: "#9ca3af", fontSize: 20 }} />
+                    </InputAdornment>
+                  ),
+                }}
+                sx={inputStyles}
+              />
+            </Box>
 
             <TextField
               fullWidth

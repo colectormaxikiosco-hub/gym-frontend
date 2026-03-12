@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import CloseIcon from "@mui/icons-material/Close"
+import { formatPlanDuration } from "../../utils/membershipUtils"
 import AttachMoneyIcon from "@mui/icons-material/AttachMoney"
 import CreditCardIcon from "@mui/icons-material/CreditCard"
 import AccountBalanceIcon from "@mui/icons-material/AccountBalance"
@@ -59,7 +60,7 @@ export default function PaymentDialog({ isOpen, onClose, onSuccess, membershipDa
               </div>
               <div>
                 <span className="text-xs text-gray-600">Duración</span>
-                <p className="font-medium text-gray-900">{planData.duration_days} días</p>
+                <p className="font-medium text-gray-900">{formatPlanDuration(planData)}</p>
               </div>
               <div>
                 <span className="text-xs text-gray-600">Total a pagar</span>

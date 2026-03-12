@@ -82,15 +82,16 @@ export function getReminderSentDaysArray(raw) {
 
 /**
  * Indica si el cliente debe ver el botón de recordatorio:
- * - Plan con duración > 5 días (excluye planes diarios).
+ * - Solo planes por días con duración > 5 días (no aplica a planes por horas).
  * - Le quedan 5, 4, 3, 2, 1 días o vence hoy (0).
  * - Aún no se envió el recordatorio para ese día (un mensaje por día).
- * @param {{ active_membership?: { days_remaining?: number, duration_days?: number, reminder_sent_days?: string } | null, phone?: string }} client
+ * @param {{ active_membership?: { days_remaining?: number, duration_days?: number, duration_hours?: number, reminder_sent_days?: string } | null, phone?: string }} client
  * @returns {boolean}
  */
 export function canSendMembershipReminder(client) {
   const m = client?.active_membership
   if (!m) return false
+  if (Number(m.duration_hours) > 0) return false
   const durationDays = Number(m.duration_days)
   if (durationDays <= MIN_PLAN_DAYS_FOR_REMINDER) return false
   const days = m.days_remaining
@@ -117,8 +118,8 @@ export function getMembershipReminderMessage(daysRemaining) {
 }
 
 /**
- * Estilos de fila según membresía: verde (activa), naranja (5-2 días), rojo (1 o vence hoy), rojo oscuro (vencida).
- * @param {{ active_membership?: { days_remaining?: number, duration_days?: number } | null, expired_membership?: { end_date?: string, status?: string } | null }} client
+ * Estilos de fila según membresía: verde (activa), naranja (5-2 días o <1h), rojo (1 o vence hoy o <30min), rojo oscuro (vencida).
+ * @param {{ active_membership?: { days_remaining?: number, duration_days?: number, duration_hours?: number, minutes_remaining?: number } | null, expired_membership?: { end_date?: string, status?: string } | null }} client
  * @returns {{ backgroundColor: string, borderLeft: string, "&:hover": { backgroundColor: string } }}
  */
 export function getMembershipRowStyle(client) {
@@ -139,10 +140,33 @@ export function getMembershipRowStyle(client) {
       "&:hover": { backgroundColor: "#fafafa" },
     }
   }
+  const isHourPlan = Number(m.duration_hours) > 0
+  const minutesRem = m.minutes_remaining
   const durationDays = Number(m.duration_days)
   const days = Number(m.days_remaining)
 
-  // Plan con más de 5 días: naranja a 5, 4, 3 y 2 días; rojo a 1 día o vence hoy (0)
+  if (isHourPlan && typeof minutesRem === "number") {
+    if (minutesRem <= 30) {
+      return {
+        backgroundColor: "#fef2f2",
+        borderLeft: "3px solid #dc2626",
+        "&:hover": { backgroundColor: "#fee2e2" },
+      }
+    }
+    if (minutesRem <= 60) {
+      return {
+        backgroundColor: "#fff7ed",
+        borderLeft: "3px solid #ea580c",
+        "&:hover": { backgroundColor: "#ffedd5" },
+      }
+    }
+    return {
+      backgroundColor: "#f0fdf4",
+      borderLeft: "3px solid #16a34a",
+      "&:hover": { backgroundColor: "#dcfce7" },
+    }
+  }
+
   if (durationDays > MIN_PLAN_DAYS_FOR_REMINDER) {
     if (days === 1 || days === 0) {
       return {
@@ -160,7 +184,6 @@ export function getMembershipRowStyle(client) {
     }
   }
 
-  // Verde: membresía activa (planes cortos o aún con muchos días)
   return {
     backgroundColor: "#f0fdf4",
     borderLeft: "3px solid #16a34a",

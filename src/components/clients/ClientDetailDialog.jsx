@@ -365,8 +365,13 @@ export default function ClientDetailDialog({
                         Reenviar credenciales por WhatsApp
                       </Button>
                     )}
-                    {(detailClient?.active_membership ?? rowClient?.active_membership) &&
-                     Number((detailClient?.active_membership ?? rowClient?.active_membership)?.duration_days ?? 0) > 5 && (
+                    {(() => {
+                      const am = detailClient?.active_membership ?? rowClient?.active_membership
+                      if (!am) return false
+                      const days = Number(am.duration_days ?? 0)
+                      const hours = Number(am.duration_hours ?? 0)
+                      return days > 5 || hours > 0
+                    })() && (
                       <Button
                         variant="outlined"
                         size="small"

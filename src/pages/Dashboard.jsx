@@ -41,6 +41,7 @@ import {
 import { format } from "date-fns"
 import { es } from "date-fns/locale"
 import { parseDateOnly, getTodayLocalISO } from "../utils/dateUtils"
+import { formatMembershipTimeRemaining, formatPlanDuration } from "../utils/membershipUtils"
 import { useAuth } from "../context/AuthContext"
 import clientService from "../services/clientService"
 import planService from "../services/planService"
@@ -253,9 +254,21 @@ const Dashboard = () => {
       return { label: "Sin membresía activa", bg: "#fef3c7", border: "#fcd34d", color: "#92400e" }
     }
     const m = client.active_membership
+    const { label } = formatMembershipTimeRemaining(m)
+    const isHourPlan = Number(m.duration_hours) > 0
+    const minutesRem = m.minutes_remaining
     const dur = Number(m.duration_days)
     const d = Number(m.days_remaining)
-    const isShortPlan = dur <= 5
+    const isShortPlan = !isHourPlan && dur <= 5
+    if (isHourPlan) {
+      if (typeof minutesRem === "number" && minutesRem <= 30) {
+        return { label, bg: "#fee2e2", border: "#fca5a5", color: "#991b1b" }
+      }
+      if (typeof minutesRem === "number" && minutesRem <= 60) {
+        return { label, bg: "#ffedd5", border: "#fdba74", color: "#c2410c" }
+      }
+      return { label, bg: "#dcfce7", border: "#86efac", color: "#166534" }
+    }
     if (isShortPlan) {
       return {
         label: d === 0 ? "Vence hoy" : d === 1 ? "1 día" : `${d} días`,
@@ -408,9 +421,10 @@ const Dashboard = () => {
                 const badge = getMembershipBadge(client)
                 const hasActive = !!client.active_membership
                 const durationDays = Number(client.active_membership?.duration_days ?? 0)
-                const canRegister = hasActive && durationDays > 1
-                const canRenewOrChange = hasActive && durationDays > 5
-                const canAddClass = hasActive && durationDays >= 10
+                const durationHours = Number(client.active_membership?.duration_hours ?? 0)
+                const canRegister = hasActive && (durationHours > 0 || durationDays > 1)
+                const canRenewOrChange = hasActive && (durationHours > 0 || durationDays > 5)
+                const canAddClass = hasActive && (durationHours > 0 || durationDays >= 10)
                 return (
                   <Paper
                     key={client.id}
@@ -826,7 +840,7 @@ const Dashboard = () => {
                       <Typography variant="subtitle2" sx={{ fontWeight: 600, color: "#92400e", mb: 1.5 }}>Resumen del plan</Typography>
                       <Box sx={{ display: "flex", justifyContent: "space-between" }}>
                         <Typography variant="body2" color="text.secondary">Duración</Typography>
-                        <Typography variant="body2" fontWeight={500}>{selectedPlan.duration_days} días</Typography>
+                        <Typography variant="body2" fontWeight={500}>{formatPlanDuration(selectedPlan)}</Typography>
                       </Box>
                       <Box sx={{ display: "flex", justifyContent: "space-between" }}>
                         <Typography variant="body2" color="text.secondary">Precio</Typography>
@@ -846,7 +860,7 @@ const Dashboard = () => {
                       </Box>
                       <Box>
                         <Typography variant="caption" color="text.secondary">Duración</Typography>
-                        <Typography variant="body2" fontWeight={500}>{planForPayment.duration_days} días</Typography>
+                        <Typography variant="body2" fontWeight={500}>{formatPlanDuration(planForPayment)}</Typography>
                       </Box>
                       {pendingMembership?.instructor_id && (() => {
                         const inst = planForPayment?.instructors?.find((i) => Number(i.id) === Number(pendingMembership.instructor_id))
