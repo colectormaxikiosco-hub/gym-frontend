@@ -70,6 +70,14 @@ const MovementsGeneralTab = () => {
     loadMovements()
   }, [pagination.page, pagination.limit])
 
+  useEffect(() => {
+    if (pagination.page !== 1) {
+      pagination.setPage(1)
+      return
+    }
+    loadMovements(1)
+  }, [typeFilter, periodFilter])
+
   const handleSearch = () => {
     if (pagination.page !== 1) {
       pagination.setPage(1)
