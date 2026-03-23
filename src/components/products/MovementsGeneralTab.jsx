@@ -18,12 +18,14 @@ import {
   MenuItem,
   Button,
   InputAdornment,
+  TablePagination,
 } from "@mui/material"
 import { Search, Refresh } from "@mui/icons-material"
 import productService from "../../services/productService"
 import { format } from "date-fns"
 import { es } from "date-fns/locale"
 import { formatMovementQuantity } from "../../utils/formatProductQuantity"
+import usePagination from "../../hooks/usePagination"
 
 const inputStyles = {
   "& .MuiOutlinedInput-root": {
@@ -40,15 +42,23 @@ const MovementsGeneralTab = () => {
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState("")
   const [typeFilter, setTypeFilter] = useState("")
+  const [periodFilter, setPeriodFilter] = useState("")
+  const pagination = usePagination({ limit: 10, rowsPerPageOptions: [10, 25, 50, 100] })
 
-  const loadMovements = async () => {
+  const loadMovements = async (targetPage = pagination.page) => {
     try {
       setLoading(true)
       const params = {}
       if (search.trim()) params.search = search.trim()
       if (typeFilter) params.type = typeFilter
+      if (periodFilter) params.period = periodFilter
+      params.page = targetPage
+      params.limit = pagination.limit
       const res = await productService.getAllMovements(params)
       setMovements(res.data || [])
+      if (res.pagination) {
+        pagination.setPagination(res.pagination)
+      }
     } catch (error) {
       if (!error.cancelled) setMovements([])
     } finally {
@@ -58,10 +68,14 @@ const MovementsGeneralTab = () => {
 
   useEffect(() => {
     loadMovements()
-  }, [])
+  }, [pagination.page, pagination.limit])
 
   const handleSearch = () => {
-    loadMovements()
+    if (pagination.page !== 1) {
+      pagination.setPage(1)
+      return
+    }
+    loadMovements(1)
   }
 
   const formatDate = (d) => (d ? format(new Date(d), "dd/MM/yyyy HH:mm", { locale: es }) : "—")
@@ -88,7 +102,7 @@ const MovementsGeneralTab = () => {
         </Box>
         <Button
           startIcon={<Refresh />}
-          onClick={loadMovements}
+          onClick={() => loadMovements()}
           variant="outlined"
           size="small"
           sx={{
@@ -127,6 +141,14 @@ const MovementsGeneralTab = () => {
             <MenuItem value="entrada">Entrada</MenuItem>
             <MenuItem value="salida">Salida</MenuItem>
             <MenuItem value="ajuste">Ajuste</MenuItem>
+          </Select>
+        </FormControl>
+        <FormControl size="small" sx={{ ...inputStyles, minWidth: 180 }}>
+          <InputLabel>Período</InputLabel>
+          <Select value={periodFilter} label="Período" onChange={(e) => setPeriodFilter(e.target.value)}>
+            <MenuItem value="">Todo</MenuItem>
+            <MenuItem value="7">Últimos 7 días</MenuItem>
+            <MenuItem value="30">Últimos 30 días</MenuItem>
           </Select>
         </FormControl>
         <Button
@@ -239,6 +261,29 @@ const MovementsGeneralTab = () => {
             )}
           </TableBody>
         </Table>
+        {!loading && (
+          <TablePagination
+            component="div"
+            count={pagination.total}
+            page={pagination.page - 1}
+            onPageChange={pagination.handleChangePage}
+            rowsPerPage={pagination.limit}
+            onRowsPerPageChange={pagination.handleChangeRowsPerPage}
+            rowsPerPageOptions={pagination.rowsPerPageOptions}
+            labelRowsPerPage="Filas:"
+            labelDisplayedRows={({ from, to, count }) => `${from}-${to} de ${count}`}
+            sx={{
+              borderTop: "1px solid #e5e7eb",
+              fontSize: "0.875rem",
+              ".MuiTablePagination-selectLabel, .MuiTablePagination-displayedRows": {
+                fontWeight: 500,
+                color: "#6b7280",
+              },
+              ".MuiIconButton-root:not(.Mui-disabled)": { color: "#374151" },
+              ".MuiIconButton-root.Mui-disabled": { color: "#d1d5db" },
+            }}
+          />
+        )}
       </TableContainer>
     </Box>
   )

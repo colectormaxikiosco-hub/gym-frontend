@@ -46,6 +46,9 @@ const ProductsStockTab = () => {
   const [message, setMessage] = useState({ type: "", text: "" })
   const [search, setSearch] = useState("")
   const [categoryFilter, setCategoryFilter] = useState("")
+  const [stockOrder, setStockOrder] = useState("")
+  const [priceMin, setPriceMin] = useState("")
+  const [priceMax, setPriceMax] = useState("")
   const [categories, setCategories] = useState([])
 
   const [openProductDialog, setOpenProductDialog] = useState(false)
@@ -68,10 +71,26 @@ const ProductsStockTab = () => {
 
   const loadProducts = async () => {
     try {
+      const parsedPriceMin = priceMin !== "" ? Number(priceMin) : null
+      const parsedPriceMax = priceMax !== "" ? Number(priceMax) : null
+      if (
+        parsedPriceMin != null &&
+        parsedPriceMax != null &&
+        !Number.isNaN(parsedPriceMin) &&
+        !Number.isNaN(parsedPriceMax) &&
+        parsedPriceMin > parsedPriceMax
+      ) {
+        setMessage({ type: "error", text: "El precio mínimo no puede ser mayor al precio máximo" })
+        return
+      }
+
       setLoading(true)
       const params = {}
       if (search.trim()) params.search = search.trim()
       if (categoryFilter.trim()) params.category = categoryFilter.trim()
+      if (stockOrder) params.stock_order = stockOrder
+      if (priceMin !== "" && !Number.isNaN(parsedPriceMin)) params.price_min = parsedPriceMin
+      if (priceMax !== "" && !Number.isNaN(parsedPriceMax)) params.price_max = parsedPriceMax
       const res = await productService.getAll(params)
       setProducts(res.data || [])
     } catch (error) {
@@ -216,6 +235,36 @@ const ProductsStockTab = () => {
             ))}
           </Select>
         </FormControl>
+        <FormControl size="small" sx={{ ...inputStyles, minWidth: 170 }}>
+          <InputLabel>Orden de stock</InputLabel>
+          <Select
+            value={stockOrder}
+            label="Orden de stock"
+            onChange={(e) => setStockOrder(e.target.value)}
+          >
+            <MenuItem value="">Normal</MenuItem>
+            <MenuItem value="asc">Menor a mayor</MenuItem>
+            <MenuItem value="desc">Mayor a menor</MenuItem>
+          </Select>
+        </FormControl>
+        <TextField
+          size="small"
+          label="Precio mínimo"
+          type="number"
+          value={priceMin}
+          onChange={(e) => setPriceMin(e.target.value)}
+          inputProps={{ min: 0, step: "0.01" }}
+          sx={{ ...inputStyles, minWidth: 150 }}
+        />
+        <TextField
+          size="small"
+          label="Precio máximo"
+          type="number"
+          value={priceMax}
+          onChange={(e) => setPriceMax(e.target.value)}
+          inputProps={{ min: 0, step: "0.01" }}
+          sx={{ ...inputStyles, minWidth: 150 }}
+        />
         <Button
           variant="outlined"
           onClick={handleSearch}
