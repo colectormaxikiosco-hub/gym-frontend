@@ -11,6 +11,14 @@ import {
   TextField,
   InputAdornment,
   Button,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  Chip,
 } from "@mui/material"
 import {
   Close,
@@ -22,9 +30,11 @@ import {
   CreditCard,
   Receipt,
   Description,
+  Visibility,
 } from "@mui/icons-material"
 import { NumericFormat } from "react-number-format"
 import currentAccountService from "../../services/currentAccountService"
+import saleService from "../../services/saleService"
 
 export default function CurrentAccountDialog({ open, onClose, client }) {
   const [loading, setLoading] = useState(true)
@@ -36,6 +46,9 @@ export default function CurrentAccountDialog({ open, onClose, client }) {
     description: "",
   })
   const [error, setError] = useState("")
+  const [detailOpen, setDetailOpen] = useState(false)
+  const [detailLoading, setDetailLoading] = useState(false)
+  const [detailSale, setDetailSale] = useState(null)
 
   useEffect(() => {
     if (open && client) {
@@ -121,6 +134,30 @@ export default function CurrentAccountDialog({ open, onClose, client }) {
       credit_card: "Tarjeta",
     }
     return methods[method] || method
+  }
+
+  const formatPrice = (n) =>
+    new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", minimumFractionDigits: 2 }).format(n)
+
+  const getSaleIdFromMovement = (movement) => {
+    const description = String(movement?.description || "")
+    const match = description.match(/Venta\s*#\s*(\d+)/i)
+    return match ? Number(match[1]) : null
+  }
+
+  const handleOpenSaleDetail = async (saleId) => {
+    if (!saleId) return
+    try {
+      setDetailOpen(true)
+      setDetailLoading(true)
+      setDetailSale(null)
+      const res = await saleService.getById(saleId)
+      setDetailSale(res.data || null)
+    } catch {
+      setDetailSale(null)
+    } finally {
+      setDetailLoading(false)
+    }
   }
 
   const balance = account?.balance || 0
@@ -580,24 +617,29 @@ export default function CurrentAccountDialog({ open, onClose, client }) {
                     },
                   }}
                 >
-                  {account.movements.map((movement) => (
-                    <Box
-                      key={movement.id}
-                      sx={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        p: 2,
-                        backgroundColor: "#fafafa",
-                        borderRadius: "12px",
-                        border: "1px solid #f3f4f6",
-                        transition: "all 0.2s",
-                        "&:hover": {
-                          backgroundColor: "#f5f5f5",
-                          borderColor: "#e5e7eb",
-                        },
-                      }}
-                    >
+                  {account.movements.map((movement) => {
+                    const saleId = getSaleIdFromMovement(movement)
+                    const isSaleMovement = Boolean(saleId)
+                    return (
+                      <Box
+                        key={movement.id}
+                        onClick={isSaleMovement ? () => handleOpenSaleDetail(saleId) : undefined}
+                        sx={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          p: 2,
+                          backgroundColor: "#fafafa",
+                          borderRadius: "12px",
+                          border: "1px solid #f3f4f6",
+                          transition: "all 0.2s",
+                          cursor: isSaleMovement ? "pointer" : "default",
+                          "&:hover": {
+                            backgroundColor: "#f5f5f5",
+                            borderColor: "#e5e7eb",
+                          },
+                        }}
+                      >
                       <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
                         {getMovementIcon(movement.type)}
                         <Box>
@@ -616,6 +658,14 @@ export default function CurrentAccountDialog({ open, onClose, client }) {
                             {movement.payment_method &&
                               ` • ${getPaymentMethodLabel(movement.payment_method)}`}
                           </Typography>
+                          {isSaleMovement && (
+                            <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, mt: 0.5 }}>
+                              <Visibility sx={{ fontSize: 14, color: "#6b7280" }} />
+                              <Typography variant="caption" sx={{ color: "#6b7280" }}>
+                                Ver detalle de la venta
+                              </Typography>
+                            </Box>
+                          )}
                         </Box>
                       </Box>
                       <Box sx={{ textAlign: "right" }}>
@@ -648,7 +698,8 @@ export default function CurrentAccountDialog({ open, onClose, client }) {
                         </Typography>
                       </Box>
                     </Box>
-                  ))}
+                    )
+                  })}
                 </Box>
               )}
             </Box>
@@ -686,6 +737,81 @@ export default function CurrentAccountDialog({ open, onClose, client }) {
           Cerrar
         </Button>
       </Box>
+
+      <Dialog
+        open={detailOpen}
+        onClose={() => setDetailOpen(false)}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{ sx: { borderRadius: "16px" } }}
+      >
+        <DialogContent sx={{ p: 0 }}>
+          {detailLoading ? (
+            <Box sx={{ display: "flex", justifyContent: "center", py: 8 }}>
+              <Typography variant="body2" color="text.secondary">Cargando detalle...</Typography>
+            </Box>
+          ) : !detailSale ? (
+            <Box sx={{ p: 3 }}>
+              <Alert severity="error" sx={{ borderRadius: "10px" }}>
+                No se pudo cargar el detalle de la venta.
+              </Alert>
+            </Box>
+          ) : (
+            <Box sx={{ p: 3 }}>
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 2, flexWrap: "wrap" }}>
+                <Typography variant="h6" sx={{ fontWeight: 700, color: "#111827" }}>
+                  Venta #{detailSale.id}
+                </Typography>
+                <Chip
+                  size="small"
+                  label={detailSale.status === "cancelled" ? "Cancelada" : "Completada"}
+                  sx={{
+                    backgroundColor: detailSale.status === "cancelled" ? "#f3f4f6" : "#dcfce7",
+                    color: detailSale.status === "cancelled" ? "#6b7280" : "#166534",
+                    fontWeight: 600,
+                    fontSize: "0.75rem",
+                  }}
+                />
+              </Box>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                {new Date(detailSale.created_at).toLocaleString("es-AR")} · {detailSale.user_name || "—"}
+              </Typography>
+              <TableContainer component={Paper} elevation={0} sx={{ border: "1px solid #e5e7eb", borderRadius: "10px", mb: 2 }}>
+                <Table size="small">
+                  <TableHead>
+                    <TableRow sx={{ backgroundColor: "#fafafa" }}>
+                      <TableCell>Producto</TableCell>
+                      <TableCell align="right">Cant.</TableCell>
+                      <TableCell align="right">P. unit.</TableCell>
+                      <TableCell align="right">Subtotal</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {(detailSale.items || []).map((item) => (
+                      <TableRow key={item.id}>
+                        <TableCell>{item.product_name} ({item.product_code})</TableCell>
+                        <TableCell align="right">{item.quantity} {item.unit}</TableCell>
+                        <TableCell align="right">{formatPrice(item.unit_price)}</TableCell>
+                        <TableCell align="right">{formatPrice(item.subtotal)}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+              <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 2, flexWrap: "wrap" }}>
+                {detailSale.discount > 0 && (
+                  <Typography variant="body2" color="text.secondary">
+                    Descuento: {formatPrice(detailSale.discount)}
+                  </Typography>
+                )}
+                <Typography variant="h6" fontWeight={700} sx={{ color: "#d97706" }}>
+                  Total: {formatPrice(detailSale.total)}
+                </Typography>
+              </Box>
+            </Box>
+          )}
+        </DialogContent>
+      </Dialog>
     </Dialog>
   )
 }
