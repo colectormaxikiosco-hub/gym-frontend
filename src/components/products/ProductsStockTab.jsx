@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import {
   Box,
   Typography,
@@ -50,6 +50,7 @@ const ProductsStockTab = () => {
   const [priceMin, setPriceMin] = useState("")
   const [priceMax, setPriceMax] = useState("")
   const [categories, setCategories] = useState([])
+  const didMountPriceFiltersRef = useRef(false)
 
   const [openProductDialog, setOpenProductDialog] = useState(false)
   const [editingProduct, setEditingProduct] = useState(null)
@@ -63,6 +64,21 @@ const ProductsStockTab = () => {
   useEffect(() => {
     loadProducts()
   }, [])
+
+  useEffect(() => {
+    loadProducts()
+  }, [categoryFilter, stockOrder])
+
+  useEffect(() => {
+    if (!didMountPriceFiltersRef.current) {
+      didMountPriceFiltersRef.current = true
+      return
+    }
+    const timer = setTimeout(() => {
+      loadProducts()
+    }, 400)
+    return () => clearTimeout(timer)
+  }, [priceMin, priceMax])
 
   useEffect(() => {
     const cats = [...new Set(products.map((p) => p.category).filter(Boolean))].sort()
@@ -103,6 +119,12 @@ const ProductsStockTab = () => {
 
   const handleSearch = () => {
     loadProducts()
+  }
+
+  const handlePriceKeyDown = (e) => {
+    if (e.key === "Enter") {
+      handleSearch()
+    }
   }
 
   const handleOpenProductDialog = (product = null) => {
@@ -253,6 +275,7 @@ const ProductsStockTab = () => {
           type="number"
           value={priceMin}
           onChange={(e) => setPriceMin(e.target.value)}
+          onKeyDown={handlePriceKeyDown}
           inputProps={{ min: 0, step: "0.01" }}
           sx={{ ...inputStyles, minWidth: 150 }}
         />
@@ -262,6 +285,7 @@ const ProductsStockTab = () => {
           type="number"
           value={priceMax}
           onChange={(e) => setPriceMax(e.target.value)}
+          onKeyDown={handlePriceKeyDown}
           inputProps={{ min: 0, step: "0.01" }}
           sx={{ ...inputStyles, minWidth: 150 }}
         />
