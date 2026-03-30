@@ -5,6 +5,9 @@ const api = axios.create({
   timeout: 10000,
   headers: {
     "Content-Type": "application/json",
+    // Evita caché intermedia de respuestas GET autenticadas (p. ej. /auth/verify)
+    "Cache-Control": "no-cache",
+    Pragma: "no-cache",
   },
 })
 
