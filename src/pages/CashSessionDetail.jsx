@@ -415,16 +415,21 @@ export default function CashSessionDetail() {
           <Box
             sx={{
               display: "flex",
-              alignItems: "center",
+              alignItems: "flex-end",
               gap: 2,
               flexWrap: "wrap",
             }}
           >
             <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
               <Person sx={{ fontSize: 20, color: "#6b7280" }} />
-              <Typography variant="body2" fontWeight={600} color="text.primary">
-                {session.user_name || "-"}
-              </Typography>
+              <Box sx={{ textAlign: { xs: "left", sm: "right" } }}>
+                <Typography variant="caption" color="text.secondary" sx={{ display: "block", lineHeight: 1.2 }}>
+                  Operador de la sesión (cajero)
+                </Typography>
+                <Typography variant="body2" fontWeight={600} color="text.primary">
+                  {session.user_name || "—"}
+                </Typography>
+              </Box>
             </Box>
           </Box>
         </Box>

@@ -141,7 +141,7 @@ export default function CurrentAccountDialog({ open, onClose, client }) {
 
   const getSaleIdFromMovement = (movement) => {
     const description = String(movement?.description || "")
-    const match = description.match(/Venta\s*#\s*(\d+)/i)
+    const match = description.match(/(?:Cancelaci[oó]n\s+)?Venta\s*#\s*(\d+)/i)
     return match ? Number(match[1]) : null
   }
 

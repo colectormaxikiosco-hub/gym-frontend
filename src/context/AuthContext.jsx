@@ -20,6 +20,8 @@ export const AuthProvider = ({ children }) => {
         const result = await authService.verifyToken()
         if (result.success) {
           setUser(result.user)
+          // Mantener storage alineado con el servidor (rol/nombre actualizados)
+          localStorage.setItem("gymUser", JSON.stringify(result.user))
         } else if (result.cancelled) {
           // Petición cancelada (ej. Strict Mode): no hacer logout, restaurar usuario desde storage
           setUser(savedUser)
@@ -32,6 +34,31 @@ export const AuthProvider = ({ children }) => {
     }
 
     initAuth()
+  }, [])
+
+  // Otra pestaña cambió token/usuario (mismo origen): sincronizar sesión y evitar estado incoherente
+  useEffect(() => {
+    const handleStorage = async (e) => {
+      if (e.key !== "gymToken" && e.key !== "gymUser") return
+      const token = authService.getToken()
+      if (!token) {
+        setUser(null)
+        return
+      }
+      const result = await authService.verifyToken()
+      if (result.success) {
+        setUser(result.user)
+        localStorage.setItem("gymUser", JSON.stringify(result.user))
+      } else if (result.cancelled) {
+        const saved = authService.getCurrentUser()
+        if (saved) setUser(saved)
+      } else {
+        authService.logout()
+        setUser(null)
+      }
+    }
+    window.addEventListener("storage", handleStorage)
+    return () => window.removeEventListener("storage", handleStorage)
   }, [])
 
   const login = async (username, password) => {
