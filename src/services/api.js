@@ -1,4 +1,5 @@
 import axios from "axios"
+import { getToken, clearAuth } from "../utils/authStorage"
 
 const api = axios.create({
   timeout: 10000,
@@ -16,7 +17,7 @@ const generateRequestKey = (config) => {
 // Interceptor para agregar token y prevenir duplicados
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem("gymToken")
+    const token = getToken()
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
     }
@@ -71,8 +72,7 @@ api.interceptors.response.use(
     if (error.response?.status === 401) {
       const isLoginRequest = error.config?.url?.includes("auth/login")
       if (!isLoginRequest) {
-        localStorage.removeItem("gymToken")
-        localStorage.removeItem("gymUser")
+        clearAuth()
         window.location.href = "/login"
       }
     }

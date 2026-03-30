@@ -1,5 +1,6 @@
 import api from "./api"
 import { API_ENDPOINTS } from "../config/api"
+import * as authStorage from "../utils/authStorage"
 
 const authService = {
   login: async (username, password) => {
@@ -11,8 +12,7 @@ const authService = {
 
       if (response.data.success) {
         const { token, user } = response.data.data
-        localStorage.setItem("gymToken", token)
-        localStorage.setItem("gymUser", JSON.stringify(user))
+        authStorage.setAuth(token, user)
         return { success: true, user }
       }
 
@@ -54,17 +54,20 @@ const authService = {
   },
 
   logout: () => {
-    localStorage.removeItem("gymToken")
-    localStorage.removeItem("gymUser")
+    authStorage.clearAuth()
   },
 
   getCurrentUser: () => {
-    const userStr = localStorage.getItem("gymUser")
-    return userStr ? JSON.parse(userStr) : null
+    return authStorage.getCurrentUser()
   },
 
   getToken: () => {
-    return localStorage.getItem("gymToken")
+    return authStorage.getToken()
+  },
+
+  /** Sincronizar usuario en storage tras verify o edición de perfil */
+  persistUser: (user) => {
+    authStorage.setStoredUser(user)
   },
 }
 

@@ -15,6 +15,7 @@ import {
 import { Person, Lock, Visibility, VisibilityOff, Email, Badge, Close } from "@mui/icons-material"
 import userService from "../../services/userService"
 import clientService from "../../services/clientService"
+import authService from "../../services/authService"
 import { useAuth } from "../../context/AuthContext"
 
 const ProfileTab = () => {
@@ -80,7 +81,7 @@ const ProfileTab = () => {
 
       const updatedUser = { ...user, username: response.data.username, name: response.data.name }
       setUser(updatedUser)
-      localStorage.setItem("gymUser", JSON.stringify(updatedUser))
+      authService.persistUser(updatedUser)
 
       setMessage({ type: "success", text: "Perfil actualizado correctamente" })
       setSaving(false)
