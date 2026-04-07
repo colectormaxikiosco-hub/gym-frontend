@@ -241,7 +241,7 @@ export default function MembershipReports() {
   const loadPlansAndInstructors = useCallback(async () => {
     try {
       const [plansRes, instructorsRes] = await Promise.all([
-        planService.getAll(),
+        planService.getAll({ include_inactive: true }),
         instructorService.getAll(),
       ])
       setPlans(Array.isArray(plansRes?.data) ? plansRes.data : plansRes ?? [])

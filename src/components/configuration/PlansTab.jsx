@@ -74,7 +74,7 @@ const PlansTab = () => {
   const loadPlans = async () => {
     try {
       setLoading(true)
-      const response = await planService.getAll()
+      const response = await planService.getAll({ include_inactive: true })
       setPlans(response.data || [])
     } catch (err) {
       if (!err.cancelled) {
@@ -170,15 +170,17 @@ const PlansTab = () => {
   }
 
   const handleDelete = async (id) => {
-    if (window.confirm("¿Estás seguro de eliminar este plan?")) {
-      try {
-        await planService.delete(id)
-        setSuccess("Plan eliminado correctamente")
-        loadPlans()
-        setTimeout(() => setSuccess(""), 3000)
-      } catch (err) {
-        setError(err.response?.data?.message || "Error al eliminar el plan")
-      }
+    const ok = window.confirm(
+      "Si el plan tiene alguna membresía registrada (activa o del pasado), se desactivará y dejará de mostrarse para nuevas membresías, sin afectar las existentes.\n\nSi no tiene membresías, se eliminará definitivamente.\n\n¿Continuar?",
+    )
+    if (!ok) return
+    try {
+      const res = await planService.delete(id)
+      setSuccess(res?.message || (res?.action === "deleted" ? "Plan eliminado correctamente" : "Plan desactivado correctamente"))
+      loadPlans()
+      setTimeout(() => setSuccess(""), 5000)
+    } catch (err) {
+      setError(err.response?.data?.message || "Error al eliminar el plan")
     }
   }
 

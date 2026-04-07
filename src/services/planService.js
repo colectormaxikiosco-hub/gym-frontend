@@ -2,8 +2,11 @@ import api from "./api"
 import { API_ENDPOINTS } from "../config/api"
 
 const planService = {
-  getAll: async () => {
-    const response = await api.get(API_ENDPOINTS.PLANS)
+  /** @param {{ include_inactive?: boolean }} [params] - include_inactive: listar también planes desactivados (config / reportes) */
+  getAll: async (params = {}) => {
+    const query = {}
+    if (params.include_inactive) query.include_inactive = "true"
+    const response = await api.get(API_ENDPOINTS.PLANS, { params: query })
     return response.data
   },
 
