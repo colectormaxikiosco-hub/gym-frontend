@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import {
   Box,
   Button,
@@ -21,29 +21,41 @@ import {
   InputAdornment,
   Autocomplete,
   MenuItem,
+  Switch,
+  Tooltip,
 } from "@mui/material"
 import {
   Add,
   Edit,
   Delete,
-  ToggleOn,
-  ToggleOff,
   Close,
   FitnessCenter,
   AttachMoney,
   CalendarMonth,
   Description,
   Refresh,
+  Visibility,
+  VisibilityOff,
 } from "@mui/icons-material"
 import { NumericFormat } from "react-number-format"
 import planService from "../../services/planService"
 import instructorService from "../../services/instructorService"
 import { formatPlanDuration } from "../../utils/membershipUtils"
 
+/** Alineado con backend: 0/false/"0" = inactivo; resto (1, true, undefined) = activo */
+function isPlanActive(plan) {
+  const v = plan?.active
+  if (v === false || v === 0 || v === "0") return false
+  if (v === true || v === 1 || v === "1") return true
+  return true
+}
+
 const PlansTab = () => {
   const [plans, setPlans] = useState([])
   const [instructorsList, setInstructorsList] = useState([])
   const [loading, setLoading] = useState(true)
+  const [showInactivePlans, setShowInactivePlans] = useState(false)
+  const [togglingId, setTogglingId] = useState(null)
   const [openDialog, setOpenDialog] = useState(false)
   const [editingPlan, setEditingPlan] = useState(null)
   const [error, setError] = useState("")
@@ -58,9 +70,24 @@ const PlansTab = () => {
     instructor_ids: [],
   })
 
+  const loadPlans = useCallback(async () => {
+    try {
+      setLoading(true)
+      setError("")
+      const response = await planService.getAll({ include_inactive: showInactivePlans })
+      setPlans(response?.data || [])
+    } catch (err) {
+      if (!err.cancelled) {
+        setError("Error al cargar los planes")
+      }
+    } finally {
+      setLoading(false)
+    }
+  }, [showInactivePlans])
+
   useEffect(() => {
     loadPlans()
-  }, [])
+  }, [loadPlans])
 
   useEffect(() => {
     if (openDialog) {
@@ -70,20 +97,6 @@ const PlansTab = () => {
       }).catch(() => setInstructorsList([]))
     }
   }, [openDialog])
-
-  const loadPlans = async () => {
-    try {
-      setLoading(true)
-      const response = await planService.getAll({ include_inactive: true })
-      setPlans(response.data || [])
-    } catch (err) {
-      if (!err.cancelled) {
-        setError("Error al cargar los planes")
-      }
-    } finally {
-      setLoading(false)
-    }
-  }
 
   const handleOpenDialog = (plan = null) => {
     if (plan) {
@@ -143,7 +156,7 @@ const PlansTab = () => {
         instructor_ids: formData.instructor_ids || [],
       }
       if (editingPlan) {
-        payload.active = editingPlan.active !== false
+        payload.active = isPlanActive(editingPlan)
         await planService.update(editingPlan.id, payload)
         setSuccess("Plan actualizado correctamente")
       } else {
@@ -160,12 +173,16 @@ const PlansTab = () => {
 
   const handleToggleStatus = async (id) => {
     try {
-      await planService.toggleStatus(id)
-      setSuccess("Estado del plan actualizado")
-      loadPlans()
+      setTogglingId(id)
+      setError("")
+      const res = await planService.toggleStatus(id)
+      setSuccess(res?.message || "Estado del plan actualizado")
+      await loadPlans()
       setTimeout(() => setSuccess(""), 3000)
     } catch (err) {
       setError(err.response?.data?.message || "Error al cambiar estado")
+    } finally {
+      setTogglingId(null)
     }
   }
 
@@ -220,11 +237,33 @@ const PlansTab = () => {
             Gestión de Planes
           </Typography>
           <Typography variant="body2" sx={{ color: "#6b7280" }}>
-            Administra los planes de membresía disponibles
+            {showInactivePlans
+              ? "Mostrando planes activos e inactivos"
+              : "Solo se listan planes activos (para nuevas membresías)"}
           </Typography>
         </Box>
 
-        <Box sx={{ display: "flex", gap: 1.5 }}>
+        <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1.5, alignItems: "center" }}>
+          <Button
+            variant={showInactivePlans ? "contained" : "outlined"}
+            size="small"
+            startIcon={showInactivePlans ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
+            onClick={() => setShowInactivePlans((v) => !v)}
+            sx={{
+              borderColor: "#d97706",
+              color: showInactivePlans ? "#fff" : "#d97706",
+              backgroundColor: showInactivePlans ? "#d97706" : "transparent",
+              borderRadius: "10px",
+              textTransform: "none",
+              fontWeight: 600,
+              "&:hover": {
+                borderColor: "#b45309",
+                backgroundColor: showInactivePlans ? "#b45309" : "#fffbeb",
+              },
+            }}
+          >
+            {showInactivePlans ? "Ocultar inactivos" : "Mostrar planes inactivos"}
+          </Button>
           <IconButton
             onClick={loadPlans}
             size="small"
@@ -349,12 +388,16 @@ const PlansTab = () => {
                 </TableCell>
               </TableRow>
             ) : (
-              plans.map((plan) => (
+              plans.map((plan) => {
+                const active = isPlanActive(plan)
+                return (
                 <TableRow
                   key={plan.id}
                   hover
                   sx={{
-                    "&:hover": { backgroundColor: "#fafafa" },
+                    opacity: active ? 1 : 0.92,
+                    backgroundColor: active ? undefined : "#fafafa",
+                    "&:hover": { backgroundColor: active ? "#fafafa" : "#f3f4f6" },
                     "&:last-child .MuiTableCell-root": { borderBottom: "none" },
                   }}
                 >
@@ -420,25 +463,48 @@ const PlansTab = () => {
                   </TableCell>
                   <TableCell>
                     <Chip
-                      label={(plan.active !== false && plan.active !== 0) ? "Activo" : "Inactivo"}
+                      label={active ? "Activo" : "Inactivo"}
                       size="small"
                       sx={{
-                        backgroundColor: (plan.active !== false && plan.active !== 0) ? "#dcfce7" : "#f3f4f6",
-                        color: (plan.active !== false && plan.active !== 0) ? "#166534" : "#6b7280",
+                        backgroundColor: active ? "#dcfce7" : "#fef2f2",
+                        color: active ? "#166534" : "#b91c1c",
                         fontWeight: 600,
                         fontSize: "0.75rem",
                       }}
                     />
                   </TableCell>
                   <TableCell align="right">
-                    <IconButton
-                      size="small"
-                      onClick={() => handleToggleStatus(plan.id)}
-                      sx={{ color: (plan.active !== false && plan.active !== 0) ? "#dc2626" : "#16a34a" }}
-                      title={(plan.active !== false && plan.active !== 0) ? "Desactivar" : "Activar"}
-                    >
-                      {(plan.active !== false && plan.active !== 0) ? <ToggleOff fontSize="small" /> : <ToggleOn fontSize="small" />}
-                    </IconButton>
+                    <Tooltip title={active ? "Desactivar plan (no aparecerá en nuevas membresías)" : "Activar plan"}>
+                      <span style={{ display: "inline-flex", verticalAlign: "middle" }}>
+                        <Switch
+                          checked={active}
+                          disabled={togglingId === plan.id}
+                          onChange={() => handleToggleStatus(plan.id)}
+                          size="medium"
+                          inputProps={{
+                            "aria-label": active ? "Desactivar plan" : "Activar plan",
+                          }}
+                          sx={{
+                            "& .MuiSwitch-switchBase.Mui-checked": {
+                              color: "#16a34a",
+                              "&:hover": { backgroundColor: "rgba(22, 163, 74, 0.12)" },
+                            },
+                            "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track": {
+                              backgroundColor: "#22c55e !important",
+                              opacity: "1 !important",
+                            },
+                            "& .MuiSwitch-switchBase:not(.Mui-checked)": {
+                              color: "#dc2626",
+                              "&:hover": { backgroundColor: "rgba(220, 38, 38, 0.08)" },
+                            },
+                            "& .MuiSwitch-switchBase:not(.Mui-checked) + .MuiSwitch-track": {
+                              backgroundColor: "#fca5a5 !important",
+                              opacity: "1 !important",
+                            },
+                          }}
+                        />
+                      </span>
+                    </Tooltip>
                     <IconButton
                       size="small"
                       onClick={() => handleOpenDialog(plan)}
@@ -457,7 +523,8 @@ const PlansTab = () => {
                     </IconButton>
                   </TableCell>
                 </TableRow>
-              ))
+                )
+              })
             )}
           </TableBody>
         </Table>
