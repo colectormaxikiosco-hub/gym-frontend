@@ -160,7 +160,7 @@ const Memberships = () => {
   useEffect(() => {
     const renewClient = location.state?.renewClient
     if (!renewClient?.id || !renewClient?.active_membership?.end_date) return
-    const startDate = String(renewClient.active_membership.end_date).split("T")[0]
+    const startDate = getTodayLocalISO()
     setRenewClientFromNav(renewClient)
     setFormData({
       client_id: renewClient.id,
@@ -931,7 +931,7 @@ const Memberships = () => {
               </Typography>
               <Typography variant="body2" sx={{ color: "#6b7280", mt: 0.25 }}>
                 {dialogStep === 1
-                  ? (renewClientFromNav ? "La nueva membresía comenzará al vencer la actual" : "Asigna un plan a un cliente")
+                  ? (renewClientFromNav ? "Podés renovar antes del vencimiento; la membresía nueva comienza en la fecha de pago" : "Asigna un plan a un cliente")
                   : "Paso 2 de 2 — Seleccioná el método de pago"}
               </Typography>
             </Box>
@@ -1010,9 +1010,7 @@ const Memberships = () => {
                   <Autocomplete
                     value={clients.find((c) => c.id === formData.client_id) || null}
                     onChange={(_, newValue) => {
-                      const startDate = newValue?.active_membership?.end_date
-                        ? String(newValue.active_membership.end_date).split("T")[0]
-                        : getTodayLocalISO()
+                      const startDate = getTodayLocalISO()
                       setFormData({
                         ...formData,
                         client_id: newValue ? newValue.id : "",
@@ -1054,6 +1052,8 @@ const Memberships = () => {
                     )}
                     renderOption={(props, option) => {
                       const hasActive = option.active_membership != null
+                      const activeCount = Number(option.active_membership_count || 0)
+                      const hasMultipleActive = activeCount > 1
                       const untilDate = option.active_membership?.end_date
                         ? format(parseDateOnly(option.active_membership.end_date), "dd/MM/yyyy", { locale: es })
                         : ""
@@ -1072,6 +1072,11 @@ const Memberships = () => {
                                 Membresía activa hasta {untilDate} — podés renovar o cambiar
                               </Typography>
                             )}
+                            {hasMultipleActive && (
+                              <Typography variant="caption" sx={{ color: "#b91c1c", fontWeight: 700, mt: 0.25 }}>
+                                Atención: tiene {activeCount} membresías activas vigentes
+                              </Typography>
+                            )}
                           </Box>
                         </li>
                       )
@@ -1082,13 +1087,24 @@ const Memberships = () => {
 
                 {formData.client_id && (() => {
                   const selectedClientForForm = clients.find((c) => c.id === formData.client_id)
+                  const activeCount = Number(selectedClientForForm?.active_membership_count || 0)
+                  const hasMultipleActive = activeCount > 1
                   const durationDays = Number(selectedClientForForm?.active_membership?.duration_days ?? 0)
                   const hasLongActive = durationDays >= 10
-                  if (!hasLongActive) return null
+                  if (!hasLongActive && !hasMultipleActive) return null
                   return (
-                    <Alert severity="info" sx={{ borderRadius: "12px" }} icon={<InfoOutlined />}>
-                      Este cliente tiene membresía activa (ej. mensual). Podés agregar una clase (plan por día) sin que pierda la actual.
-                    </Alert>
+                    <Box sx={{ display: "flex", flexDirection: "column", gap: 1.25 }}>
+                      {hasMultipleActive && (
+                        <Alert severity="warning" sx={{ borderRadius: "12px" }} icon={<WarningAmber />}>
+                          Este cliente tiene <strong>{activeCount}</strong> membresías activas vigentes. Verificá bien el plan y la fecha antes de confirmar.
+                        </Alert>
+                      )}
+                      {hasLongActive && (
+                        <Alert severity="info" sx={{ borderRadius: "12px" }} icon={<InfoOutlined />}>
+                          Este cliente tiene membresía activa (ej. mensual). Podés agregar una clase (plan por día) sin que pierda la actual.
+                        </Alert>
+                      )}
+                    </Box>
                   )
                 })()}
 
