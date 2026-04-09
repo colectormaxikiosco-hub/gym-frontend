@@ -37,7 +37,10 @@ import {
   Phone as PhoneIcon,
   Autorenew,
   Sports,
+  Payment,
+  Delete,
 } from "@mui/icons-material"
+import { NumericFormat } from "react-number-format"
 import { format } from "date-fns"
 import { es } from "date-fns/locale"
 import { parseDateOnly, getTodayLocalISO } from "../utils/dateUtils"
@@ -93,6 +96,8 @@ const Dashboard = () => {
   })
   const [pendingMembership, setPendingMembership] = useState(null)
   const [paymentMethod, setPaymentMethod] = useState("cash")
+  const [paymentMode, setPaymentMode] = useState("single")
+  const [combinedPayments, setCombinedPayments] = useState([{ id: 1, payment_method: "cash", amount: "" }])
   const [discountTypeMembership, setDiscountTypeMembership] = useState("amount")
   const [discountValueMembership, setDiscountValueMembership] = useState("")
   const [paymentLoading, setPaymentLoading] = useState(false)
@@ -134,6 +139,8 @@ const Dashboard = () => {
       setCreateStep(1)
       setPendingMembership(null)
       setPaymentMethod("cash")
+      setPaymentMode("single")
+      setCombinedPayments([{ id: 1, payment_method: "cash", amount: "" }])
       planService.getAll().then((res) => {
         const list = res?.data ?? res ?? []
         setPlans(Array.isArray(list) ? list : [])
@@ -192,6 +199,9 @@ const Dashboard = () => {
     setSelectedClient(null)
     setCreateStep(1)
     setPendingMembership(null)
+    setPaymentMethod("cash")
+    setPaymentMode("single")
+    setCombinedPayments([{ id: 1, payment_method: "cash", amount: "" }])
     setDiscountTypeMembership("amount")
     setDiscountValueMembership("")
     setError("")
@@ -210,6 +220,9 @@ const Dashboard = () => {
       return
     }
     setPendingMembership({ ...formData })
+    setPaymentMode("single")
+    setPaymentMethod("cash")
+    setCombinedPayments([{ id: 1, payment_method: "cash", amount: "" }])
     setDiscountTypeMembership("amount")
     setDiscountValueMembership("")
     setCreateStep(2)
@@ -222,18 +235,33 @@ const Dashboard = () => {
       ? (planPriceNum * Math.min(100, Math.max(0, Number(discountValueMembership) || 0))) / 100
       : Math.max(0, Number(discountValueMembership) || 0)
   const amountToPayMembership = Math.max(0, Math.round((planPriceNum - Math.min(discountNumMembership, planPriceNum)) * 100) / 100)
+  const combinedSum = combinedPayments.reduce((s, p) => s + (Number(p.amount) || 0), 0)
+  const combinedOk = Math.abs(combinedSum - amountToPayMembership) < 0.01 && combinedPayments.every((p) => (Number(p.amount) || 0) > 0)
+  const hasCurrentAccountInCombined = combinedPayments.some((p) => p.payment_method === "current_account")
 
   const handleConfirmPayment = async () => {
     if (!pendingMembership) return
+    if (paymentMode === "combined" && !combinedOk) {
+      setError("Los pagos deben sumar exactamente el monto a pagar.")
+      return
+    }
     const discountToSend = Math.min(discountNumMembership, planPriceNum)
     setPaymentLoading(true)
     setError("")
     try {
-      await membershipService.create({
+      const dataToSend = {
         ...pendingMembership,
-        payment_method: paymentMethod,
         discount: Math.round(discountToSend * 100) / 100,
-      })
+      }
+      if (paymentMode === "single") {
+        dataToSend.payment_method = paymentMethod
+      } else {
+        dataToSend.payments = combinedPayments.map((p) => ({
+          payment_method: p.payment_method,
+          amount: Number(p.amount),
+        }))
+      }
+      await membershipService.create(dataToSend)
       setSuccess("Membresía creada correctamente")
       handleCloseCreateModal()
       if (debouncedSearch.trim().length >= 2) {
@@ -924,41 +952,165 @@ const Dashboard = () => {
                   </Box>
                   <Box>
                     <Typography variant="body2" sx={{ fontWeight: 500, color: "#374151", mb: 1.5 }}>Método de pago *</Typography>
-                    <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 1.5 }}>
-                      {PAYMENT_METHODS.map((item) => {
-                        const selected = paymentMethod === item.id
-                        const Icon = item.icon
-                        return (
-                          <Box
-                            key={item.id}
-                            onClick={() => setPaymentMethod(item.id)}
-                            sx={{
-                              p: 2,
-                              borderRadius: "10px",
-                              border: "2px solid",
-                              borderColor: selected ? item.color : "#e5e7eb",
-                              backgroundColor: selected ? `${item.color}08` : "#fff",
-                              cursor: "pointer",
-                              transition: "all 0.2s",
-                              display: "flex",
-                              alignItems: "center",
-                              gap: 1.5,
-                              "&:hover": { borderColor: selected ? item.color : "#d1d5db" },
-                            }}
-                          >
-                            <Box sx={{ width: 36, height: 36, borderRadius: "10px", backgroundColor: selected ? item.color : "#f3f4f6", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                              <Icon sx={{ fontSize: 20, color: selected ? "#fff" : "#9ca3af" }} />
-                            </Box>
-                            <Box>
-                              <Typography variant="body2" sx={{ fontWeight: 600, color: selected ? item.color : "#374151" }}>{item.label}</Typography>
-                              <Typography variant="caption" color="text.secondary">{item.sub}</Typography>
-                            </Box>
-                          </Box>
-                        )
-                      })}
+                    <Box sx={{ display: "flex", gap: 1, mb: 1.5 }}>
+                      <Button
+                        size="small"
+                        variant={paymentMode === "single" ? "contained" : "outlined"}
+                        onClick={() => setPaymentMode("single")}
+                        sx={{
+                          flex: 1,
+                          textTransform: "none",
+                          borderRadius: "10px",
+                          ...(paymentMode === "single" && { backgroundColor: "#d97706", "&:hover": { backgroundColor: "#b45309" } }),
+                        }}
+                      >
+                        Un solo método
+                      </Button>
+                      <Button
+                        size="small"
+                        variant={paymentMode === "combined" ? "contained" : "outlined"}
+                        startIcon={<Payment />}
+                        onClick={() => setPaymentMode("combined")}
+                        sx={{
+                          flex: 1,
+                          textTransform: "none",
+                          borderRadius: "10px",
+                          ...(paymentMode === "combined" && { backgroundColor: "#d97706", "&:hover": { backgroundColor: "#b45309" } }),
+                        }}
+                      >
+                        Combinado
+                      </Button>
                     </Box>
+                    {paymentMode === "single" ? (
+                      <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 1.5 }}>
+                        {PAYMENT_METHODS.map((item) => {
+                          const selected = paymentMethod === item.id
+                          const Icon = item.icon
+                          return (
+                            <Box
+                              key={item.id}
+                              onClick={() => setPaymentMethod(item.id)}
+                              sx={{
+                                p: 2,
+                                borderRadius: "10px",
+                                border: "2px solid",
+                                borderColor: selected ? item.color : "#e5e7eb",
+                                backgroundColor: selected ? `${item.color}08` : "#fff",
+                                cursor: "pointer",
+                                transition: "all 0.2s",
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 1.5,
+                                "&:hover": { borderColor: selected ? item.color : "#d1d5db" },
+                              }}
+                            >
+                              <Box sx={{ width: 36, height: 36, borderRadius: "10px", backgroundColor: selected ? item.color : "#f3f4f6", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                                <Icon sx={{ fontSize: 20, color: selected ? "#fff" : "#9ca3af" }} />
+                              </Box>
+                              <Box>
+                                <Typography variant="body2" sx={{ fontWeight: 600, color: selected ? item.color : "#374151" }}>{item.label}</Typography>
+                                <Typography variant="caption" color="text.secondary">{item.sub}</Typography>
+                              </Box>
+                            </Box>
+                          )
+                        })}
+                      </Box>
+                    ) : (
+                      <Box>
+                        <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 1 }}>
+                          Total a cubrir: {formatPrice(amountToPayMembership)}
+                        </Typography>
+                        {combinedPayments.map((row) => (
+                          <Box key={row.id} sx={{ display: "flex", gap: 1, alignItems: "center", mb: 1 }}>
+                            <Select
+                              size="small"
+                              value={row.payment_method}
+                              onChange={(e) =>
+                                setCombinedPayments((prev) =>
+                                  prev.map((p) => (p.id === row.id ? { ...p, payment_method: e.target.value } : p))
+                                )
+                              }
+                              sx={{ minWidth: 140, borderRadius: "10px" }}
+                            >
+                              <MenuItem value="cash">Efectivo</MenuItem>
+                              <MenuItem value="transfer">Transferencia</MenuItem>
+                              <MenuItem value="credit_card">Tarjeta</MenuItem>
+                              <MenuItem value="current_account">Cuenta corriente</MenuItem>
+                            </Select>
+                            <NumericFormat
+                              value={row.amount}
+                              onValueChange={(v) =>
+                                setCombinedPayments((prev) =>
+                                  prev.map((p) => (p.id === row.id ? { ...p, amount: v.value ?? "" } : p))
+                                )
+                              }
+                              thousandSeparator="."
+                              decimalSeparator=","
+                              prefix="$ "
+                              decimalScale={2}
+                              fixedDecimalScale
+                              allowNegative={false}
+                              customInput={TextField}
+                              size="small"
+                              placeholder="0"
+                              sx={{ flex: 1, "& .MuiOutlinedInput-root": { borderRadius: "10px" } }}
+                            />
+                            <IconButton
+                              size="small"
+                              onClick={() =>
+                                setCombinedPayments((prev) => (prev.length > 1 ? prev.filter((p) => p.id !== row.id) : prev))
+                              }
+                              disabled={combinedPayments.length <= 1}
+                              sx={{ color: "#dc2626" }}
+                            >
+                              <Delete fontSize="small" />
+                            </IconButton>
+                          </Box>
+                        ))}
+                        <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5, mt: 0.5 }}>
+                          <Button
+                            size="small"
+                            startIcon={<Add />}
+                            onClick={() =>
+                              setCombinedPayments((prev) => [...prev, { id: Date.now(), payment_method: "cash", amount: "" }])
+                            }
+                            sx={{ textTransform: "none", color: "#d97706" }}
+                          >
+                            Agregar pago
+                          </Button>
+                          {combinedSum < amountToPayMembership - 0.01 && (
+                            <Button
+                              size="small"
+                              variant="outlined"
+                              startIcon={<AttachMoney />}
+                              onClick={() => {
+                                const rest = Math.round((amountToPayMembership - combinedSum) * 100) / 100
+                                setCombinedPayments((prev) => [...prev, { id: Date.now(), payment_method: "cash", amount: String(rest) }])
+                              }}
+                              sx={{ textTransform: "none", borderColor: "#16a34a", color: "#16a34a" }}
+                            >
+                              Resto en efectivo ({formatPrice(amountToPayMembership - combinedSum)})
+                            </Button>
+                          )}
+                        </Box>
+                        <Typography
+                          variant="body2"
+                          sx={{
+                            mt: 1,
+                            fontWeight: 600,
+                            color: combinedOk ? "#16a34a" : combinedSum < amountToPayMembership ? "#d97706" : "#dc2626",
+                          }}
+                        >
+                          {combinedOk
+                            ? "Total cubierto"
+                            : combinedSum < amountToPayMembership
+                              ? `Falta: ${formatPrice(amountToPayMembership - combinedSum)}`
+                              : `Excedente: ${formatPrice(combinedSum - amountToPayMembership)}`}
+                        </Typography>
+                      </Box>
+                    )}
                   </Box>
-                  {paymentMethod === "current_account" && (
+                  {(paymentMethod === "current_account" || (paymentMode === "combined" && hasCurrentAccountInCombined)) && (
                     <Box sx={{ p: 2, borderRadius: "10px", border: "1px solid #fed7aa", backgroundColor: "#fff7ed", display: "flex", alignItems: "flex-start", gap: 1.5 }}>
                       <InfoOutlined sx={{ color: "#ea580c", fontSize: 20, mt: 0.25 }} />
                       <Box>
@@ -1021,7 +1173,7 @@ const Dashboard = () => {
               <Button
                 onClick={handleConfirmPayment}
                 variant="contained"
-                disabled={paymentLoading}
+                disabled={paymentLoading || (paymentMode === "combined" && !combinedOk)}
                 sx={{
                   backgroundColor: "#d97706",
                   borderRadius: "10px",
@@ -1033,7 +1185,13 @@ const Dashboard = () => {
                   "&:disabled": { backgroundColor: "#d1d5db" },
                 }}
               >
-                {paymentLoading ? "Procesando..." : paymentMethod === "current_account" ? "Registrar a cuenta corriente" : "Confirmar pago"}
+                {paymentLoading
+                  ? "Procesando..."
+                  : paymentMode === "combined"
+                    ? "Confirmar pago combinado"
+                    : paymentMethod === "current_account"
+                      ? "Registrar a cuenta corriente"
+                      : "Confirmar pago"}
               </Button>
             </>
           )}
