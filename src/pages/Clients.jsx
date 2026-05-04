@@ -349,6 +349,15 @@ const Clients = () => {
     return format(new Date(date), "dd/MM/yyyy HH:mm", { locale: es })
   }
 
+  const formatBirthDate = (date) => {
+    if (!date) return "—"
+    try {
+      return format(parseDateOnly(date), "dd/MM/yyyy", { locale: es })
+    } catch {
+      return "—"
+    }
+  }
+
   const refreshList = useCallback(() => {
     loadClients()
   }, [loadClients])
@@ -568,7 +577,7 @@ const Clients = () => {
             <Table
               size="small"
               sx={{
-                minWidth: 720,
+                minWidth: 800,
                 "& .MuiTableCell-root": {
                   borderBottom: "1px solid #f3f4f6",
                   py: { xs: 1.25, sm: 1.5 },
@@ -593,6 +602,9 @@ const Clients = () => {
                   <TableCell>Usuario</TableCell>
                   <TableCell>Nombre</TableCell>
                   <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>DNI</TableCell>
+                  <TableCell sx={{ display: { xs: "none", md: "table-cell" }, whiteSpace: "nowrap" }}>
+                    Nacimiento
+                  </TableCell>
                   <TableCell sx={{ display: { xs: "none", lg: "table-cell" } }}>Teléfono</TableCell>
                   <TableCell>Estado</TableCell>
                   <TableCell sx={{ display: { xs: "none", sm: "table-cell" } }}>Membresía</TableCell>
@@ -604,7 +616,7 @@ const Clients = () => {
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={9} align="center" sx={{ py: 8 }}>
+                    <TableCell colSpan={10} align="center" sx={{ py: 8 }}>
                       <Box className="flex flex-col items-center gap-3">
                         <Box className="w-9 h-9 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
                         <Typography variant="body2" color="text.secondary">
@@ -615,7 +627,7 @@ const Clients = () => {
                   </TableRow>
                 ) : clients.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={9} align="center" sx={{ py: 8 }}>
+                    <TableCell colSpan={10} align="center" sx={{ py: 8 }}>
                       <Typography variant="body2" color="text.secondary">
                         {showInactiveOnly
                           ? "No hay clientes inactivos"
@@ -664,6 +676,11 @@ const Clients = () => {
                         <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>
                           <Typography variant="body2" color="text.secondary">
                             {client.dni || "-"}
+                          </Typography>
+                        </TableCell>
+                        <TableCell sx={{ display: { xs: "none", md: "table-cell" }, whiteSpace: "nowrap" }}>
+                          <Typography variant="body2" color="text.secondary" component="span">
+                            {formatBirthDate(client.birth_date)}
                           </Typography>
                         </TableCell>
                         <TableCell sx={{ display: { xs: "none", lg: "table-cell" } }}>

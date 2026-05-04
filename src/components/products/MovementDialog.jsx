@@ -42,35 +42,69 @@ const MovementDialog = ({ open, onClose, product, onSaved, inputStyles }) => {
     const v = Number(String(quantity).replace(",", "."))
     return Number.isNaN(v) ? 0 : v
   }, [quantity])
+  /** Para entrada/salida es el delta; para ajuste es la diferencia (nuevo stock − actual). */
   const delta = useMemo(() => {
     if (type === "entrada") return Math.abs(qtyNum)
     if (type === "salida") return -Math.abs(qtyNum)
-    return qtyNum // ajuste: puede ser + o -
-  }, [type, qtyNum])
-  const resultingStock = useMemo(() => Math.max(0, currentStock + delta), [currentStock, delta])
-  const isValidMovement = type === "salida" ? currentStock + delta >= 0 : type === "ajuste" ? currentStock + delta >= 0 : true
-  const showPreview = quantity !== "" && quantity !== "-" && quantity !== "."
+    // ajuste: cantidad ingresada = stock físico objetivo
+    return qtyNum - currentStock
+  }, [type, qtyNum, currentStock])
+  const resultingStock = useMemo(() => {
+    if (type === "ajuste") return Math.max(0, qtyNum)
+    return Math.max(0, currentStock + delta)
+  }, [type, qtyNum, currentStock, delta])
+  const isValidMovement =
+    type === "salida"
+      ? currentStock + delta >= 0
+      : type === "ajuste"
+        ? !Number.isNaN(qtyNum) && qtyNum >= 0
+        : true
+  const showPreview = useMemo(() => {
+    if (quantity === "" || quantity === "-" || quantity === ".") return false
+    const v = Number(String(quantity).replace(",", "."))
+    if (Number.isNaN(v)) return false
+    if (type === "ajuste") return v >= 0
+    if (v === 0) return false
+    return true
+  }, [quantity, type])
 
   const handleSubmit = async () => {
     if (!product) return
-    const qty = Number(quantity)
-    if (isNaN(qty) || qty === 0) {
-      setError("La cantidad no puede ser cero")
-      return
-    }
-    if (type !== "ajuste" && qty <= 0) {
-      setError("La cantidad debe ser mayor a 0")
-      return
-    }
-    if (type === "salida" && qty > Number(product.stock)) {
-      setError("No hay stock suficiente para esta salida")
-      return
+    const qtyParsed = Number(String(quantity).replace(",", "."))
+    if (type === "ajuste") {
+      if (Number.isNaN(qtyParsed) || qtyParsed < 0) {
+        setError("Indicá el stock real contado (0 o más)")
+        return
+      }
+      if (qtyParsed === currentStock) {
+        setError("El stock ya coincide con ese valor")
+        return
+      }
+    } else {
+      const qty = Number(String(quantity).replace(",", "."))
+      if (isNaN(qty) || qty === 0) {
+        setError("La cantidad no puede ser cero")
+        return
+      }
+      if (qty <= 0) {
+        setError("La cantidad debe ser mayor a 0")
+        return
+      }
+      if (type === "salida" && qty > Number(product.stock)) {
+        setError("No hay stock suficiente para esta salida")
+        return
+      }
     }
     setError("")
     try {
-      let sendQty = qty
-      if (type === "salida") sendQty = -Math.abs(qty)
-      else if (type === "entrada") sendQty = Math.abs(qty)
+      let sendQty
+      if (type === "ajuste") {
+        sendQty = qtyParsed
+      } else {
+        const qty = Number(String(quantity).replace(",", "."))
+        if (type === "salida") sendQty = -Math.abs(qty)
+        else sendQty = Math.abs(qty)
+      }
       await productService.createMovement({
         product_id: product.id,
         type,
@@ -172,15 +206,34 @@ const MovementDialog = ({ open, onClose, product, onSaved, inputStyles }) => {
           </FormControl>
           <TextField
             fullWidth
-            label="Cantidad"
+            label={type === "ajuste" ? "Stock físico (inventario real)" : "Cantidad"}
             type="number"
-            inputProps={{ min: type === "ajuste" ? undefined : 0, step: unit === "kg" ? 0.001 : 1 }}
+            inputProps={{
+              min: type === "ajuste" ? 0 : 0,
+              step: unit === "kg" ? 0.001 : 1,
+            }}
             value={quantity}
             onChange={(e) => setQuantity(e.target.value)}
             size="small"
             required
-            placeholder={unit === "kg" ? "Ej: 2.5" : "Ej: 10"}
-            helperText={type === "salida" ? "No puede superar el stock actual." : type === "ajuste" ? "Positivo suma, negativo resta al stock." : unit === "unidad" ? "Ingresá un número entero." : ""}
+            placeholder={
+              type === "ajuste"
+                ? unit === "kg"
+                  ? "Ej: cantidad que hay en almacén"
+                  : "Ej: unidades contadas"
+                : unit === "kg"
+                  ? "Ej: 2.5"
+                  : "Ej: 10"
+            }
+            helperText={
+              type === "salida"
+                ? "No puede superar el stock actual."
+                : type === "ajuste"
+                  ? "Indicá cuánto hay realmente; el sistema corrige la diferencia con el stock del sistema."
+                  : unit === "unidad"
+                    ? "Ingresá un número entero."
+                    : ""
+            }
             InputProps={{ startAdornment: <InputAdornment position="start"><SwapHoriz sx={{ color: "#9ca3af", fontSize: 20 }} /></InputAdornment> }}
             sx={inputStyles}
           />

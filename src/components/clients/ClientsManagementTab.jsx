@@ -42,7 +42,7 @@ import {
   getMembershipRowStyle,
 } from "../../utils/phoneAr"
 import membershipService from "../../services/membershipService"
-import { toDateInputValue } from "../../utils/dateUtils"
+import { toDateInputValue, parseDateOnly } from "../../utils/dateUtils"
 
 const ClientsManagementTab = () => {
   const [clients, setClients] = useState([])
@@ -273,6 +273,15 @@ const ClientsManagementTab = () => {
     return format(new Date(date), "dd/MM/yyyy HH:mm", { locale: es })
   }
 
+  const formatBirthDate = (date) => {
+    if (!date) return "—"
+    try {
+      return format(parseDateOnly(date), "dd/MM/yyyy", { locale: es })
+    } catch {
+      return "—"
+    }
+  }
+
   if (loading) {
     return (
       <Box className="flex justify-center items-center py-12">
@@ -354,13 +363,19 @@ const ClientsManagementTab = () => {
         ))}
       </Box>
 
-      <TableContainer className="border border-gray-200 rounded-lg">
-        <Table>
+      <TableContainer
+        className="border border-gray-200 rounded-lg"
+        sx={{ overflowX: "auto", WebkitOverflowScrolling: "touch" }}
+      >
+        <Table sx={{ minWidth: { xs: 720, md: 880 } }}>
           <TableHead className="bg-gray-50">
             <TableRow>
               <TableCell className="font-semibold">Usuario</TableCell>
               <TableCell className="font-semibold">Nombre</TableCell>
               <TableCell className="font-semibold">DNI</TableCell>
+              <TableCell className="font-semibold" sx={{ display: { xs: "none", md: "table-cell" }, whiteSpace: "nowrap" }}>
+                Nacimiento
+              </TableCell>
               <TableCell className="font-semibold">Teléfono</TableCell>
               <TableCell className="font-semibold">Estado</TableCell>
               <TableCell className="font-semibold">Membresía</TableCell>
@@ -395,6 +410,9 @@ const ClientsManagementTab = () => {
                   <TableCell className="font-medium">{client.username}</TableCell>
                   <TableCell>{client.name}</TableCell>
                   <TableCell>{client.dni || "-"}</TableCell>
+                  <TableCell sx={{ display: { xs: "none", md: "table-cell" }, whiteSpace: "nowrap" }} className="text-sm text-gray-600">
+                    {formatBirthDate(client.birth_date)}
+                  </TableCell>
                   <TableCell>{client.phone || "-"}</TableCell>
                   <TableCell>
                     <Chip
