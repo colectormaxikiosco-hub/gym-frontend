@@ -30,13 +30,13 @@ import {
   Checkbox,
   Tooltip,
 } from "@mui/material"
-import { Add, Edit, AccountBalance, Search, Refresh, Close, Person, Badge, Phone, Home, Lock, DriveFileRenameOutline, Visibility, PersonOff, Chat, Send } from "@mui/icons-material"
+import { Add, Edit, AccountBalance, Search, Refresh, Close, Person, Badge, Phone, Home, Lock, DriveFileRenameOutline, Visibility, PersonOff, Chat, Send, CalendarMonth } from "@mui/icons-material"
 import { NumericFormat } from "react-number-format"
 import { useNavigate } from "react-router-dom"
 import clientService from "../services/clientService"
 import { format } from "date-fns"
 import { es } from "date-fns/locale"
-import { parseDateOnly } from "../utils/dateUtils"
+import { parseDateOnly, toDateInputValue } from "../utils/dateUtils"
 import { formatMembershipTimeRemaining } from "../utils/membershipUtils"
 import CurrentAccountDialog from "../components/clients/CurrentAccountDialog"
 import ClientDetailDialog from "../components/clients/ClientDetailDialog"
@@ -70,6 +70,7 @@ const Clients = () => {
     name: "",
     phone: "",
     dni: "",
+    birth_date: "",
     address: "",
     active: true,
   })
@@ -144,6 +145,7 @@ const Clients = () => {
         name: client.name,
         phone: client.phone || "",
         dni: client.dni || "",
+        birth_date: toDateInputValue(client.birth_date),
         address: client.address || "",
         active: client.active,
         password: "",
@@ -157,6 +159,7 @@ const Clients = () => {
         name: "",
         phone: "",
         dni: "",
+        birth_date: "",
         address: "",
         active: true,
       })
@@ -227,6 +230,7 @@ const Clients = () => {
       name: "",
       phone: "",
       dni: "",
+      birth_date: "",
       address: "",
       active: true,
     })
@@ -242,6 +246,7 @@ const Clients = () => {
           name: currentClient.name,
           phone: currentClient.phone,
           dni: currentClient.dni,
+          birth_date: currentClient.birth_date || null,
           address: currentClient.address,
           active: currentClient.active,
         })
@@ -254,6 +259,7 @@ const Clients = () => {
           name: currentClient.name,
           phone: currentClient.phone,
           dni: currentClient.dni,
+          birth_date: currentClient.birth_date || null,
           address: currentClient.address,
         })
         setMessage({ type: "success", text: "Cliente creado correctamente." })
@@ -1082,6 +1088,34 @@ const Clients = () => {
                 startAdornment: (
                   <InputAdornment position="start">
                     <DriveFileRenameOutline sx={{ color: "#9ca3af", fontSize: 20 }} />
+                  </InputAdornment>
+                ),
+              }}
+              sx={{
+                "& .MuiOutlinedInput-root": {
+                  borderRadius: "10px",
+                  backgroundColor: "#fafafa",
+                  "&:hover fieldset": { borderColor: "#d1d5db" },
+                  "&.Mui-focused fieldset": { borderColor: "#d97706", borderWidth: "1px" },
+                },
+                "& .MuiInputLabel-root.Mui-focused": { color: "#d97706" },
+              }}
+            />
+
+            {/* Fecha de nacimiento (opcional) */}
+            <TextField
+              fullWidth
+              label="Fecha de nacimiento"
+              type="date"
+              value={currentClient.birth_date}
+              onChange={(e) => setCurrentClient({ ...currentClient, birth_date: e.target.value })}
+              size="small"
+              helperText="Opcional"
+              InputLabelProps={{ shrink: true }}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <CalendarMonth sx={{ color: "#9ca3af", fontSize: 20 }} />
                   </InputAdornment>
                 ),
               }}

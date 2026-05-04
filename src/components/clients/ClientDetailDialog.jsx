@@ -242,6 +242,14 @@ export default function ClientDetailDialog({
                     <InfoRow label="Nombre" value={detailClient?.name ?? "—"} />
                     <InfoRow label="Usuario" value={detailClient?.username ?? "—"} mono />
                     <InfoRow label="DNI" value={detailClient?.dni ?? rowClient?.dni ?? "—"} />
+                    <InfoRow
+                      label="Fecha de nacimiento"
+                      value={
+                        detailClient?.birth_date ?? rowClient?.birth_date
+                          ? formatDate(detailClient?.birth_date ?? rowClient?.birth_date)
+                          : "—"
+                      }
+                    />
                     <InfoRow label="Teléfono" value={detailClient?.phone || rowClient?.phone || "—"} />
                     {(detailClient?.address != null && detailClient?.address !== "") && (
                       <Box sx={{ px: { xs: 2.5, sm: 3 }, py: 1.25, borderBottom: "1px solid #f3f4f6" }}>

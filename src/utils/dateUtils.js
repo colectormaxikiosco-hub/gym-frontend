@@ -15,6 +15,16 @@ export function getTodayLocalISO() {
  * @param {string} dateStr - Fecha en formato YYYY-MM-DD (puede incluir "T..." después)
  * @returns {Date} Fecha en hora local con ese día
  */
+/**
+ * Convierte una fecha de API (DATE o ISO) a YYYY-MM-DD para inputs type="date".
+ * @param {string|Date|null|undefined} dateStr
+ * @returns {string} Cadena vacía si no hay valor.
+ */
+export function toDateInputValue(dateStr) {
+  if (dateStr == null || dateStr === "") return ""
+  return String(dateStr).trim().split("T")[0]
+}
+
 export function parseDateOnly(dateStr) {
   if (!dateStr) return null
   const s = String(dateStr).trim().split("T")[0]

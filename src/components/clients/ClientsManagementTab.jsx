@@ -25,8 +25,9 @@ import {
   Alert,
   CircularProgress,
   Tooltip,
+  InputAdornment,
 } from "@mui/material"
-import { Add, Edit, Delete, FitnessCenter, AccountBalance, Chat } from "@mui/icons-material"
+import { Add, Edit, Delete, FitnessCenter, AccountBalance, Chat, CalendarMonth } from "@mui/icons-material"
 import clientService from "../../services/clientService"
 import { format } from "date-fns"
 import { es } from "date-fns/locale"
@@ -41,6 +42,7 @@ import {
   getMembershipRowStyle,
 } from "../../utils/phoneAr"
 import membershipService from "../../services/membershipService"
+import { toDateInputValue } from "../../utils/dateUtils"
 
 const ClientsManagementTab = () => {
   const [clients, setClients] = useState([])
@@ -55,6 +57,7 @@ const ClientsManagementTab = () => {
     name: "",
     phone: "",
     dni: "",
+    birth_date: "",
     address: "",
     active: true,
   })
@@ -102,6 +105,7 @@ const ClientsManagementTab = () => {
         name: client.name,
         phone: client.phone || "",
         dni: client.dni || "",
+        birth_date: toDateInputValue(client.birth_date),
         address: client.address || "",
         active: client.active,
         password: "",
@@ -115,6 +119,7 @@ const ClientsManagementTab = () => {
         name: "",
         phone: "",
         dni: "",
+        birth_date: "",
         address: "",
         active: true,
       })
@@ -132,6 +137,7 @@ const ClientsManagementTab = () => {
       name: "",
       phone: "",
       dni: "",
+      birth_date: "",
       address: "",
       active: true,
     })
@@ -200,6 +206,7 @@ const ClientsManagementTab = () => {
           name: currentClient.name,
           phone: currentClient.phone,
           dni: currentClient.dni,
+          birth_date: currentClient.birth_date || null,
           address: currentClient.address,
           active: currentClient.active,
         })
@@ -212,6 +219,7 @@ const ClientsManagementTab = () => {
           name: currentClient.name,
           phone: currentClient.phone,
           dni: currentClient.dni,
+          birth_date: currentClient.birth_date || null,
           address: currentClient.address,
         })
         setMessage({ type: "success", text: "Cliente creado correctamente." })
@@ -539,6 +547,29 @@ const ClientsManagementTab = () => {
               value={currentClient.name}
               onChange={(e) => setCurrentClient({ ...currentClient, name: e.target.value })}
               required
+              sx={{
+                "& .MuiOutlinedInput-root": {
+                  "&.Mui-focused fieldset": { borderColor: "#f59e0b" },
+                },
+                "& .MuiInputLabel-root.Mui-focused": { color: "#f59e0b" },
+              }}
+            />
+
+            <TextField
+              fullWidth
+              label="Fecha de nacimiento"
+              type="date"
+              value={currentClient.birth_date}
+              onChange={(e) => setCurrentClient({ ...currentClient, birth_date: e.target.value })}
+              helperText="Opcional"
+              InputLabelProps={{ shrink: true }}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <CalendarMonth sx={{ color: "#9ca3af", fontSize: 20 }} />
+                  </InputAdornment>
+                ),
+              }}
               sx={{
                 "& .MuiOutlinedInput-root": {
                   "&.Mui-focused fieldset": { borderColor: "#f59e0b" },

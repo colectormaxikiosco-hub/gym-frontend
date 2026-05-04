@@ -12,11 +12,12 @@ import {
   InputAdornment,
   Typography,
 } from "@mui/material"
-import { Person, Lock, Visibility, VisibilityOff, Email, Badge, Close } from "@mui/icons-material"
+import { Person, Lock, Visibility, VisibilityOff, Email, Badge, Close, CalendarMonth } from "@mui/icons-material"
 import userService from "../../services/userService"
 import clientService from "../../services/clientService"
 import authService from "../../services/authService"
 import { useAuth } from "../../context/AuthContext"
+import { toDateInputValue } from "../../utils/dateUtils"
 
 const ProfileTab = () => {
   const { user, setUser } = useAuth()
@@ -69,7 +70,11 @@ const ProfileTab = () => {
         ? await clientService.updateMyProfile({
             username: profile.username,
             name: profile.name,
-            email: profile.email,
+            phone: profile.phone ?? "",
+            address: profile.address ?? "",
+            emergency_contact: profile.emergency_contact ?? "",
+            emergency_phone: profile.emergency_phone ?? "",
+            birth_date: profile.birth_date || null,
           })
         : await userService.updateProfile({
             username: profile.username,
@@ -222,6 +227,27 @@ const ProfileTab = () => {
             }}
             sx={inputStyles}
           />
+
+          {isClient && (
+            <TextField
+              fullWidth
+              label="Fecha de nacimiento"
+              type="date"
+              value={toDateInputValue(profile.birth_date)}
+              onChange={(e) => setProfile({ ...profile, birth_date: e.target.value })}
+              size="small"
+              helperText="Opcional"
+              InputLabelProps={{ shrink: true }}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <CalendarMonth sx={{ color: "#9ca3af", fontSize: 20 }} />
+                  </InputAdornment>
+                ),
+              }}
+              sx={inputStyles}
+            />
+          )}
 
           <TextField
             fullWidth
